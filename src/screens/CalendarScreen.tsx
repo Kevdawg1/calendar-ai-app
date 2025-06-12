@@ -108,6 +108,7 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
                   <Text style={styles.deleteButtonText}>×</Text>
                 </TouchableOpacity>
               </View>
+              <Text style={styles.taskDescription}>{task.description}</Text>
               <Text style={styles.taskTime}>
                 {formatTime(task.startTime)} - {formatTime(task.endTime)}
               </Text>
@@ -167,6 +168,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
+  },
+  taskDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    fontStyle: 'italic',
   },
   taskTime: {
     fontSize: 16,

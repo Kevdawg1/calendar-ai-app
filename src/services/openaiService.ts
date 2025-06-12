@@ -10,144 +10,84 @@ export const openaiService = {
   generateTasks: async (goals: Goal[], existingTasks?: Task[]): Promise<Task[]> => {
     try {
       const currentDate = new Date();
-      const systemMessage = `
-      You are an assistant for planning granular tasks to achieve the life goals of the user. 
-      ---
-      RULES:
-      Break down the following goals into more than one specific task.
-      For each task, provide a JSON object with these exact fields: title (string), duration (number in minutes), startDate (string in YYYY-MM-DD format), startTime (string in HH:MM format), endTime (string in HH:MM format), and goalId (string). The startDate should be greater than the current date ${currentDate.toISOString().split('T')[0]}. 
-      Each task should be a single task that can be completed in a single day.
-      Each task must be highly specific and measurable.
-      Provide reasoning for each task.
-      ${existingTasks ? 'Consider the existing tasks and generate complementary follow-up tasks that build upon them.' : ''}
-      Return ONLY a JSON array of these task objects, nothing else. No additional text or explanation.
-      `;
 
-      const prompt = `
-      Goals:
+      // Step 1: Identify key components
+      const componentsPrompt = `
+      Analyze the following life goal and identify its key components:
       ${goals.map(goal => `
         - ${goal.text}
           Type: ${goal.type}
           Priority: ${goal.priority}
           Weekly Time: ${goal.timeCommitment} hours
-          ID: ${goal.id}
       `).join('\n')}
-      
-      ${existingTasks ? `
-      Existing Tasks:
-      ${existingTasks.map(task => `
-        - ${task.title}
-          Duration: ${task.duration} minutes
-          Start Date: ${task.startDate}
-          Goal ID: ${task.goalId}
-      `).join('\n')}
-      ` : ''}`;
 
-      console.log('Sending prompt to Azure OpenAI:', prompt);
+      Return a JSON array of components, each with:
+      - name: string (name of the component)
+      - description: string (brief explanation of why this component is important)
+      - priority: string (high/medium/low based on the goal's priority)
+      `;
 
-      const response = await axios.post(
-        `${ENDPOINT}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview`,
-        {
-          messages: [
-            {
-              role: "system",
-              content: systemMessage
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          max_tokens: 1000,
-          temperature: 0.7,
-          response_format: { type: "json_object" }
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'api-key': API_KEY
-          }
-        }
-      );
+      const componentsResponse = await makeOpenAIRequest(componentsPrompt);
+      const components = JSON.parse(componentsResponse);
 
-      console.log('Raw response:', response.data);
-      
-      if (!response.data.choices?.[0]?.message?.content) {
-        throw new Error('Invalid response format from OpenAI');
-      }
+      // Step 2: Generate subtasks for each component
+      const subtasksPrompt = `
+      For each key component, generate specific subtasks that align with the goal type (${goals[0].type}).
+      Consider the weekly time commitment of ${goals[0].timeCommitment} hours.
 
-      const content = response.data.choices[0].message.content;
-      console.log('Response message:', response.data.choices[0].message);
-      console.log('Response content:', content);
+      Components:
+      ${JSON.stringify(components, null, 2)}
 
-      try {
-        const parsedContent = JSON.parse(content);
-        let tasks: Task[] = [];
+      For each subtask, provide:
+      - title: string (specific action item)
+      - description: string (reasoning for why this task is important)
+      - estimatedDuration: number (in minutes)
+      - priority: string (high/medium/low)
 
-        // Handle array, object with tasks array, or single task object
-        if (Array.isArray(parsedContent)) {
-          tasks = parsedContent.map((task: { title: string; duration: number; startDate: string; goalId: string; startTime: string; endTime: string }) => ({
-            ...task,
-            id: generateUUID(),
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }));
-        } else if (parsedContent.tasks && Array.isArray(parsedContent.tasks)) {
-          tasks = parsedContent.tasks.map((task: { title: string; duration: number; startDate: string; goalId: string; startTime: string; endTime: string }) => ({
-            ...task,
-            id: generateUUID(),
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }));
-        } else if (
-          parsedContent &&
-          typeof parsedContent === 'object' &&
-          typeof parsedContent.title === 'string' &&
-          typeof parsedContent.duration === 'number' &&
-          typeof parsedContent.startDate === 'string' &&
-          typeof parsedContent.goalId === 'string' &&
-          typeof parsedContent.startTime === 'string' &&
-          typeof parsedContent.endTime === 'string'
-        ) {
-          tasks = [{
-            ...parsedContent,
-            id: generateUUID(),
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }];
-        } else {
-          throw new Error('Response does not contain a valid tasks array, is not an array, or is not a valid single task object');
-        }
+      Return a JSON array of subtasks grouped by component.
+      `;
 
-        console.log('Parsed tasks:', tasks);
+      const subtasksResponse = await makeOpenAIRequest(subtasksPrompt);
+      const subtasksByComponent = JSON.parse(subtasksResponse);
 
-        // Validate each task
-        const validTasks = tasks.filter((task: Task) => {
-          const isValid = 
-            typeof task.title === 'string' &&
-            typeof task.duration === 'number' &&
-            typeof task.startDate === 'string' &&
-            typeof task.goalId === 'string' &&
-            !isNaN(Date.parse(task.startDate));
+      // Step 3: Format tasks for calendar
+      const calendarPrompt = `
+      Format the following subtasks into calendar-ready tasks:
+      ${JSON.stringify(subtasksByComponent, null, 2)}
 
-          if (!isValid) {
-            console.warn('Invalid task format:', task);
-          }
-          return isValid;
-        });
+      Current date: ${currentDate.toISOString().split('T')[0]}
 
-        if (validTasks.length === 0) {
-          throw new Error('No valid tasks found in response');
-        }
+      For each task, provide a JSON object with:
+      - title: string (from subtask)
+      - description: string (from subtask)
+      - duration: number (from estimatedDuration)
+      - startDate: string (YYYY-MM-DD, must be after current date)
+      - startTime: string (HH:MM)
+      - endTime: string (HH:MM)
+      - goalId: string (${goals[0].id})
 
-        return validTasks;
-      } catch (parseError: any) {
-        console.error('Error parsing response:', parseError);
-        throw new Error(`Failed to parse tasks: ${parseError.message}`);
-      }
+      Consider:
+      - Spread tasks across available time
+      - Respect the goal's weekly time commitment
+      - Group related tasks together
+      - Account for task dependencies
+      ${existingTasks ? 'Consider existing tasks and avoid scheduling conflicts.' : ''}
+
+      Return ONLY a JSON array of these task objects.
+      `;
+
+      const calendarResponse = await makeOpenAIRequest(calendarPrompt);
+      const tasks = JSON.parse(calendarResponse);
+
+      // Add metadata to tasks
+      return tasks.map((task: any) => ({
+        ...task,
+        id: generateUUID(),
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+
     } catch (error) {
       console.error('Error generating tasks:', error);
       if (axios.isAxiosError(error)) {
@@ -156,4 +96,37 @@ export const openaiService = {
       throw error;
     }
   }
-}; 
+};
+
+async function makeOpenAIRequest(prompt: string): Promise<string> {
+  const response = await axios.post(
+    `${ENDPOINT}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview`,
+    {
+      messages: [
+        {
+          role: "system",
+          content: "You are an AI assistant helping to break down life goals into actionable tasks. Provide clear, specific, and well-reasoned responses."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': API_KEY
+      }
+    }
+  );
+
+  if (!response.data.choices?.[0]?.message?.content) {
+    throw new Error('Invalid response format from OpenAI');
+  }
+
+  return response.data.choices[0].message.content;
+} 
