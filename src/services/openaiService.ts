@@ -10,6 +10,7 @@ export const openaiService = {
   generateTasks: async (goals: Goal[], existingTasks?: Task[]): Promise<Task[]> => {
     try {
       const currentDate = new Date();
+      console.log('Starting task generation for goals:', goals);
 
       // Step 1: Identify key components
       const componentsPrompt = `
@@ -27,8 +28,21 @@ export const openaiService = {
       - priority: string (high/medium/low based on the goal's priority)
       `;
 
+      console.log('Step 1: Sending components prompt');
       const componentsResponse = await makeOpenAIRequest(componentsPrompt);
-      const components = JSON.parse(componentsResponse);
+      console.log('Step 1: Received components response:', componentsResponse);
+      
+      let components;
+      try {
+        const parsedResponse = JSON.parse(componentsResponse);
+        components = Array.isArray(parsedResponse) ? parsedResponse : parsedResponse.components;
+        if (!components || !Array.isArray(components)) {
+          throw new Error('Invalid components format');
+        }
+      } catch (error) {
+        console.error('Error parsing components:', error);
+        throw new Error('Failed to parse components response');
+      }
 
       // Step 2: Generate subtasks for each component
       const subtasksPrompt = `
@@ -47,8 +61,36 @@ export const openaiService = {
       Return a JSON array of subtasks grouped by component.
       `;
 
+      console.log('Step 2: Sending subtasks prompt');
       const subtasksResponse = await makeOpenAIRequest(subtasksPrompt);
-      const subtasksByComponent = JSON.parse(subtasksResponse);
+      console.log('Step 2: Received subtasks response:', subtasksResponse);
+
+      let subtasksByComponent;
+      try {
+        const parsedResponse = JSON.parse(subtasksResponse);
+        console.log('Parsed response:', parsedResponse);
+        
+        // Handle the object structure where each component is a key with an array of subtasks
+        if (typeof parsedResponse === 'object' && !Array.isArray(parsedResponse)) {
+          subtasksByComponent = Object.entries(parsedResponse).flatMap(([component, subtasks]) => 
+            (subtasks as any[]).map(subtask => ({
+              ...subtask,
+              component
+            }))
+          );
+        } else if (Array.isArray(parsedResponse)) {
+          subtasksByComponent = parsedResponse;
+        } else {
+          throw new Error('Invalid subtasks format');
+        }
+        
+        if (!subtasksByComponent || !Array.isArray(subtasksByComponent)) {
+          throw new Error('Invalid subtasks format');
+        }
+      } catch (error) {
+        console.error('Error parsing subtasks:', error);
+        throw new Error('Failed to parse subtasks response');
+      }
 
       // Step 3: Format tasks for calendar
       const calendarPrompt = `
@@ -76,17 +118,33 @@ export const openaiService = {
       Return ONLY a JSON array of these task objects.
       `;
 
+      console.log('Step 3: Sending calendar prompt');
       const calendarResponse = await makeOpenAIRequest(calendarPrompt);
-      const tasks = JSON.parse(calendarResponse);
+      console.log('Step 3: Received calendar response:', calendarResponse);
+
+      let tasks;
+      try {
+        const parsedResponse = JSON.parse(calendarResponse);
+        tasks = Array.isArray(parsedResponse) ? parsedResponse : parsedResponse.tasks;
+        if (!tasks || !Array.isArray(tasks)) {
+          throw new Error('Invalid tasks format');
+        }
+      } catch (error) {
+        console.error('Error parsing tasks:', error);
+        throw new Error('Failed to parse tasks response');
+      }
 
       // Add metadata to tasks
-      return tasks.map((task: any) => ({
+      const tasksWithMetadata = tasks.map((task: any) => ({
         ...task,
         id: generateUUID(),
         status: 'pending',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }));
+
+      console.log('Final tasks generated:', tasksWithMetadata);
+      return tasksWithMetadata;
 
     } catch (error) {
       console.error('Error generating tasks:', error);
@@ -99,13 +157,15 @@ export const openaiService = {
 };
 
 async function makeOpenAIRequest(prompt: string): Promise<string> {
+  console.log('Making OpenAI request with prompt:', prompt);
+  
   const response = await axios.post(
     `${ENDPOINT}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview`,
     {
       messages: [
         {
           role: "system",
-          content: "You are an AI assistant helping to break down life goals into actionable tasks. Provide clear, specific, and well-reasoned responses."
+          content: "You are an AI assistant helping to break down life goals into actionable tasks. Provide clear, specific, and well-reasoned responses. Always return valid JSON."
         },
         {
           role: "user",
@@ -125,8 +185,11 @@ async function makeOpenAIRequest(prompt: string): Promise<string> {
   );
 
   if (!response.data.choices?.[0]?.message?.content) {
+    console.error('Invalid response format:', response.data);
     throw new Error('Invalid response format from OpenAI');
   }
 
-  return response.data.choices[0].message.content;
+  const content = response.data.choices[0].message.content;
+  console.log('OpenAI response content:', content);
+  return content;
 } 
