@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, ScrollView, SafeAreaView, TouchableOpacity, FlatList, Modal } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { format, addDays, parseISO } from 'date-fns';
-import axios from 'axios';
+import { generateTasks } from './src/services/openaiService';
 
 interface Goal {
   id: string;
@@ -57,7 +57,7 @@ export default function App() {
     setTasks(tasks.filter(task => task.goalId !== id));
   };
 
-  const generateTasks = async () => {
+  const handleGenerateTasks = async () => {
     if (goals.length === 0) {
       setResult('Please add at least one goal to analyze.');
       return;
@@ -65,53 +65,26 @@ export default function App() {
 
     try {
       setLoading(true);
-      const endpoint = 'YOUR_AZURE_OPENAI_ENDPOINT';
-      const key = 'YOUR_AZURE_OPENAI_KEY';
+      const tasksData = await generateTasks(goals);
+      console.log(tasksData);
 
-      const prompt = `Break down the following goals into specific tasks, considering their priority, type, and time commitment. 
-      For each task, specify a duration in minutes and suggest a date to start (within the next 30 days).
-      Format the response as a JSON array of tasks, where each task has: title, duration (in minutes), and startDate (YYYY-MM-DD).
-      
-      Goals:
-      ${goals.map(goal => `
-        - ${goal.text}
-          Type: ${goal.type}
-          Priority: ${goal.priority}
-          Weekly Time: ${goal.timeCommitment} hours
-      `).join('\n')}`;
-
-      const response = await axios.post(
-        `${endpoint}/openai/deployments/YOUR_DEPLOYMENT_NAME/chat/completions?api-version=2023-05-15`,
-        {
-          messages: [
-            { role: "system", content: "You are a task planning assistant that breaks down goals into specific, actionable tasks." },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 1000
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'api-key': key
-          }
-        }
-      );
-
-      const tasksData = JSON.parse(response.data.choices[0].message.content);
-      const newTasks = tasksData.map((task: any, index: number) => ({
+      // Assign tasks to the correct goal based on matching text (or other logic if available)
+      // If the API returns goalId, use it; otherwise, assign to the first goal for now
+      const newTasks = tasksData.map((task, index) => ({
         id: Date.now().toString() + index,
-        goalId: goals[0].id, // For simplicity, assigning all tasks to the first goal
+        goalId: goals[0].id, // If you have logic to match to the correct goal, update here
         title: task.title,
         duration: task.duration,
-        date: task.startDate,
+        date: task.startDate, // Ensure this is in 'yyyy-MM-dd' format
         completed: false
       }));
-
+      console.log(newTasks);
       setTasks([...tasks, ...newTasks]);
       setShowCalendar(true);
+      setResult(''); // Clear any previous error
     } catch (error: any) {
-      setResult(`Error: ${error.message}`);
+      console.log(error);
+      setResult(`Error generating tasks: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -124,7 +97,8 @@ export default function App() {
   };
 
   const getTasksForDate = (date: string) => {
-    return tasks.filter(task => task.date === date);
+    // Ensure date comparison is in 'yyyy-MM-dd' format
+    return tasks.filter(task => format(parseISO(task.date), 'yyyy-MM-dd') === format(parseISO(date), 'yyyy-MM-dd'));
   };
 
   const renderTaskItem = ({ item }: { item: Task }) => (
@@ -318,7 +292,7 @@ export default function App() {
 
         <TouchableOpacity
           style={[styles.analyzeButton, goals.length === 0 && styles.disabledButton]}
-          onPress={generateTasks}
+          onPress={handleGenerateTasks}
           disabled={loading || goals.length === 0}
         >
           <Text style={styles.analyzeButtonText}>
