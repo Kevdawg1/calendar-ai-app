@@ -10,15 +10,18 @@ export interface Goal {
 export interface Task {
   id: string;
   title: string;
-  description: string;
-  duration: number;
+  description?: string;
+  duration?: number;
   startDate: string;
-  startTime: string;
-  endTime: string;
+  startTime?: string;
+  endTime?: string;
   goalId: string;
   status: 'pending' | 'completed' | 'cancelled';
   createdAt: string;
   updatedAt: string;
+  category?: 'household' | 'laundry' | 'meal' | 'personal' | 'admin' | 'maintenance' | 'outdoor' | 'pet';
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'seasonal';
+  enabled?: boolean;
   recurrence?: {
     frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal';
     interval: number;
