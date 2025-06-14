@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../theme';
+import { commonStyles } from '../theme/styles';
 import { Button } from '../components/Button';
 import { Section } from '../components/Section';
 import { Badge } from '../components/Badge';
@@ -22,13 +24,18 @@ import { taskService } from '../services/taskService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
+const FREQUENCIES: LifeAdminTask['frequency'][] = ['daily', 'weekly', 'monthly', 'seasonal'];
+
 export const LifeAdminScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [editingTask, setEditingTask] = useState<LifeAdminTask | null>(null);
+  const [showFrequencyModal, setShowFrequencyModal] = useState(false);
+  const [tasks, setTasks] = useState<LifeAdminTask[]>(lifeAdminTasks);
 
-  // Get unique categories
-  const categories = Array.from(new Set(lifeAdminTasks.map(task => task.category)));
+  // Get unique categories from the managed tasks
+  const categories = Array.from(new Set(tasks.map(task => task.category)));
 
   const toggleCategory = (category: string) => {
     const newExpanded = new Set(expandedCategories);
@@ -51,21 +58,27 @@ export const LifeAdminScreen = () => {
   };
 
   const toggleCategoryAll = (category: string) => {
-    const categoryTasks = lifeAdminTasks.filter(task => task.category === category);
+    const categoryTasks = tasks.filter(task => task.category === category);
     const categoryTaskIds = new Set(categoryTasks.map(task => task.id));
     
-    // Check if all tasks in the category are currently selected
     const allSelected = categoryTasks.every(task => selectedTasks.has(task.id));
     
     const newSelected = new Set(selectedTasks);
     if (allSelected) {
-      // If all are selected, deselect all tasks in this category
       categoryTaskIds.forEach(taskId => newSelected.delete(taskId));
     } else {
-      // If not all are selected, select all tasks in this category
       categoryTaskIds.forEach(taskId => newSelected.add(taskId));
     }
     setSelectedTasks(newSelected);
+  };
+
+  const handleFrequencySelect = (task: LifeAdminTask, frequency: LifeAdminTask['frequency']) => {
+    const updatedTasks = tasks.map(t => 
+      t.id === task.id ? { ...t, frequency } : t
+    );
+    setTasks(updatedTasks);
+    setShowFrequencyModal(false);
+    setEditingTask(null);
   };
 
   const handleScheduleTasks = async () => {
@@ -75,7 +88,7 @@ export const LifeAdminScreen = () => {
       return;
     }
     
-    const selectedTasksList = lifeAdminTasks.filter(task => selectedTaskIds.includes(task.id));
+    const selectedTasksList = tasks.filter(task => selectedTaskIds.includes(task.id));
     
     try {
       Alert.alert(
@@ -85,10 +98,9 @@ export const LifeAdminScreen = () => {
       );
 
       const scheduledTasks = await lifeAdminService.scheduleTasks(selectedTasksList);
-      // Add goalId to each task
       const tasksWithGoalId = scheduledTasks.map(task => ({
         ...task,
-        goalId: 'life-admin' // Use a special goalId for life admin tasks
+        goalId: 'life-admin'
       }));
       await taskService.addTasks(tasksWithGoalId);
 
@@ -115,8 +127,8 @@ export const LifeAdminScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={commonStyles.container}>
+      <View style={commonStyles.header}>
         <Button
           title="Schedule Life Admin Tasks"
           onPress={handleScheduleTasks}
@@ -124,55 +136,64 @@ export const LifeAdminScreen = () => {
         />
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={commonStyles.content}>
         <Section title="">
-          <Text style={styles.description}>
+          <Text style={commonStyles.description}>
             Manage your recurring life admin tasks. Select the tasks you want to schedule in your calendar.
           </Text>
 
           {categories.map((category) => (
             <View key={category} style={styles.categoryContainer}>
               <TouchableOpacity
-                style={styles.categoryHeader}
+                style={commonStyles.card}
                 onPress={() => toggleCategory(category)}
               >
-                <View style={styles.categoryHeaderContent}>
-                  <Checkbox
-                    value={lifeAdminTasks
-                      .filter(task => task.category === category)
-                      .every(task => selectedTasks.has(task.id))}
-                    onValueChange={() => toggleCategoryAll(category)}
-                    color={theme.colors.primary}
+                <View style={commonStyles.cardHeader}>
+                  <View style={commonStyles.cardContent}>
+                    <Checkbox
+                      value={tasks
+                        .filter(task => task.category === category)
+                        .every(task => selectedTasks.has(task.id))}
+                      onValueChange={() => toggleCategoryAll(category)}
+                      color={theme.colors.primary}
+                    />
+                    <Text style={commonStyles.title}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name={expandedCategories.has(category) ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color={theme.colors.text.primary}
                   />
-                  <Text style={styles.categoryTitle}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </Text>
                 </View>
-                <Ionicons
-                  name={expandedCategories.has(category) ? 'chevron-up' : 'chevron-down'}
-                  size={20}
-                  color={theme.colors.text.primary}
-                />
               </TouchableOpacity>
 
               {expandedCategories.has(category) && (
                 <View style={styles.tasksContainer}>
-                  {lifeAdminTasks
+                  {tasks
                     .filter(task => task.category === category)
                     .map((task) => (
-                      <View key={task.id} style={styles.taskItem}>
-                        <View style={styles.taskContent}>
+                      <View key={task.id} style={commonStyles.card}>
+                        <View style={commonStyles.cardContent}>
                           <Checkbox
                             value={selectedTasks.has(task.id)}
                             onValueChange={() => toggleTask(task.id)}
                             color={selectedTasks.has(task.id) ? theme.colors.primary : undefined}
                           />
                           <View style={styles.taskInfo}>
-                            <Text style={styles.taskTitle}>{task.title}</Text>
-                            <Badge
-                              label={task.frequency}
-                              color={task.frequency === 'daily' ? theme.colors.primary : theme.colors.secondary}
-                            />
+                            <Text style={commonStyles.text}>{task.title}</Text>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setEditingTask(task);
+                                setShowFrequencyModal(true);
+                              }}
+                            >
+                              <Badge
+                                label={task.frequency}
+                                color={task.frequency === 'daily' ? theme.colors.primary : theme.colors.secondary}
+                              />
+                            </TouchableOpacity>
                           </View>
                         </View>
                       </View>
@@ -183,77 +204,98 @@ export const LifeAdminScreen = () => {
           ))}
         </Section>
       </ScrollView>
+
+      <Modal
+        visible={showFrequencyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowFrequencyModal(false);
+          setEditingTask(null);
+        }}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            setShowFrequencyModal(false);
+            setEditingTask(null);
+          }}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Frequency</Text>
+            {FREQUENCIES.map((frequency) => (
+              <TouchableOpacity
+                key={frequency}
+                style={[
+                  styles.frequencyOption,
+                  editingTask?.frequency === frequency && styles.frequencyOptionSelected,
+                ]}
+                onPress={() => editingTask && handleFrequencySelect(editingTask, frequency)}
+              >
+                <Text style={[
+                  styles.frequencyText,
+                  editingTask?.frequency === frequency && styles.frequencyTextSelected,
+                ]}>
+                  {frequency.charAt(0).toUpperCase() + frequency.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
   scheduleButton: {
     width: '100%',
-  },
-  content: {
-    flex: 1,
-  },
-  description: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.lg,
   },
   categoryContainer: {
     marginBottom: theme.spacing.md,
   },
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  categoryHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  categoryTitle: {
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginLeft: theme.spacing.sm,
-  },
   tasksContainer: {
     marginTop: theme.spacing.sm,
-  },
-  taskItem: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  taskContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   taskInfo: {
     flex: 1,
     marginLeft: theme.spacing.sm,
   },
-  taskTitle: {
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    width: '80%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.md,
+    textAlign: 'center',
+  },
+  frequencyOption: {
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.sm,
+  },
+  frequencyOptionSelected: {
+    backgroundColor: theme.colors.primary,
+  },
+  frequencyText: {
     fontSize: theme.typography.sizes.md,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
+    textAlign: 'center',
+  },
+  frequencyTextSelected: {
+    color: theme.colors.text.inverse,
   },
 }); 
