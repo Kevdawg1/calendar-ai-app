@@ -13,6 +13,7 @@ interface ButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   icon?: React.ReactNode;
+  disabled?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -23,19 +24,27 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   icon,
+  disabled = false,
 }) => {
   const getVariantStyles = (): ViewStyle => {
+    const baseStyle = {
+      opacity: disabled ? 0.5 : 1,
+    };
+
     switch (variant) {
       case 'secondary':
         return {
+          ...baseStyle,
           backgroundColor: theme.colors.secondary,
         };
       case 'danger':
         return {
+          ...baseStyle,
           backgroundColor: theme.colors.danger,
         };
       default:
         return {
+          ...baseStyle,
           backgroundColor: theme.colors.primary,
         };
     }
@@ -70,6 +79,7 @@ export const Button: React.FC<ButtonProps> = ({
         style,
       ]}
       onPress={onPress}
+      disabled={disabled}
     >
       {icon}
       <Text

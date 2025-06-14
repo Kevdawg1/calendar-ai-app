@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -33,6 +34,8 @@ export const LifeAdminScreen = () => {
   const [editingTask, setEditingTask] = useState<LifeAdminTask | null>(null);
   const [showFrequencyModal, setShowFrequencyModal] = useState(false);
   const [tasks, setTasks] = useState<LifeAdminTask[]>(lifeAdminTasks);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState<string>('');
 
   // Get unique categories from the managed tasks
   const categories = Array.from(new Set(tasks.map(task => task.category)));
@@ -91,13 +94,18 @@ export const LifeAdminScreen = () => {
     const selectedTasksList = tasks.filter(task => selectedTaskIds.includes(task.id));
     
     try {
+      setIsLoading(true);
+      setLoadingStage('Analyzing Tasks...');
       Alert.alert(
         'Schedule Tasks',
         `Scheduling ${selectedTasksList.length} tasks...`,
         [{ text: 'OK' }]
       );
 
+      setLoadingStage('Generating Schedule...');
       const scheduledTasks = await lifeAdminService.scheduleTasks(selectedTasksList);
+      
+      setLoadingStage('Adding to Calendar...');
       const tasksWithGoalId = scheduledTasks.map(task => ({
         ...task,
         goalId: 'life-admin'
@@ -123,6 +131,9 @@ export const LifeAdminScreen = () => {
         'Failed to schedule tasks. Please try again.',
         [{ text: 'OK' }]
       );
+    } finally {
+      setIsLoading(false);
+      setLoadingStage('');
     }
   };
 
@@ -133,8 +144,16 @@ export const LifeAdminScreen = () => {
           title="Schedule Life Admin Tasks"
           onPress={handleScheduleTasks}
           style={styles.scheduleButton}
+          disabled={isLoading}
         />
       </View>
+
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>{loadingStage}</Text>
+        </View>
+      )}
 
       <ScrollView style={commonStyles.content}>
         <Section title="">
@@ -297,5 +316,21 @@ const styles = StyleSheet.create({
   },
   frequencyTextSelected: {
     color: theme.colors.text.inverse,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.primary,
   },
 }); 

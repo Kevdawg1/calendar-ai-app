@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, FlatList, ActivityIndicator } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { goalService } from '../services/goalService';
@@ -22,6 +22,8 @@ export const GoalsScreen = () => {
   const [selectedType, setSelectedType] = useState<'short' | 'medium' | 'long'>('short');
   const [selectedPriority, setSelectedPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [timeCommitment, setTimeCommitment] = useState('5');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState<string>('');
 
   useEffect(() => {
     const loadGoals = () => {
@@ -92,8 +94,12 @@ export const GoalsScreen = () => {
 
   const handleGenerateTasks = async (goal: Goal) => {
     try {
+      setIsLoading(true);
+      setLoadingStage('Brainstorming Key Components...');
       const tasks = await openaiService.generateTasks([goal]);
+      
       if (tasks && tasks.length > 0) {
+        setLoadingStage('Adding to Calendar...');
         const calendarTasks = tasks.map(task => ({
           id: task.id,
           title: task.title,
@@ -112,6 +118,9 @@ export const GoalsScreen = () => {
     } catch (error) {
       console.error('Error generating tasks:', error);
       Alert.alert('Error', 'Failed to generate tasks. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setLoadingStage('');
     }
   };
 
@@ -278,6 +287,13 @@ export const GoalsScreen = () => {
 
   return (
     <View style={styles.container}>
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>{loadingStage}</Text>
+        </View>
+      )}
+      
       <Section title="">
         {goals.length === 0 ? (
           <EmptyState
@@ -468,5 +484,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.bold,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.primary,
   },
 }); 
