@@ -9,31 +9,32 @@ import { Task, Goal } from '../types';
 import { Calendar } from 'react-native-calendars';
 import { format, parseISO } from 'date-fns';
 import { generateUUID } from '../utils/uuid';
+import { theme } from '../theme';
+import { commonStyles } from '../theme/styles';
+import { TimeGrid } from '../components/TimeGrid';
+import { AddTaskModal } from '../components/AddTaskModal';
 
 type CalendarScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Calendar'>;
   route: RouteProp<RootStackParamList, 'Calendar'>;
 };
 
+const HOUR_HEIGHT = 60; // Height of each hour row in pixels
+
 export default function CalendarScreen({ navigation, route }: CalendarScreenProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isAddTaskModalVisible, setIsAddTaskModalVisible] = useState(false);
-  const [newTask, setNewTask] = useState({
-    title: '',
-    description: '',
-    duration: '',
-    startTime: '',
-    endTime: '',
-    goalId: ''
-  });
 
   useEffect(() => {
     const loadData = async () => {
       const allTasks = await taskService.getAllTasks();
       const allGoals = goalService.getAllGoals();
-      setTasks(allTasks);
+      const filteredTasks = allTasks.filter(
+        (t: any) => t && t.startDate && t.goalId && t.status && t.createdAt && t.updatedAt
+      );
+      setTasks(filteredTasks);
       setGoals(allGoals);
     };
 
@@ -48,12 +49,9 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
           const newTasks = await taskService.addTasks(route.params.tasks);
           console.log('Added tasks to service:', newTasks);
           setTasks(prevTasks => {
-            // Filter out any existing tasks with the same IDs
             const existingTaskIds = new Set(newTasks.map(task => task.id));
             const filteredPrevTasks = prevTasks.filter(task => !existingTaskIds.has(task.id));
-            const updatedTasks = [...filteredPrevTasks, ...newTasks];
-            console.log('Updated tasks state:', updatedTasks);
-            return updatedTasks;
+            return [...filteredPrevTasks, ...newTasks];
           });
         } catch (error) {
           console.error('Error adding tasks:', error);
@@ -88,28 +86,81 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     }
   };
 
+  const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
+    try {
+      const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
+      if (updatedTask) {
+        const updatedTasks = await taskService.getAllTasks();
+        setTasks(updatedTasks);
+      }
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      Alert.alert('Error', 'Failed to update task status');
+    }
+  };
+
+  const handleAddTask = async (taskData: {
+    title: string;
+    description: string;
+    duration: string;
+    startTime: string;
+    endTime: string;
+    goalId: string;
+  }) => {
+    if (!taskData.title.trim()) {
+      Alert.alert('Error', 'Please enter a title');
+      return;
+    }
+
+    const durationNum = parseInt(taskData.duration);
+    if (isNaN(durationNum) || durationNum <= 0) {
+      Alert.alert('Error', 'Please enter a valid duration');
+      return;
+    }
+
+    if (!taskData.startTime || !taskData.endTime) {
+      Alert.alert('Error', 'Please enter both start and end times');
+      return;
+    }
+
+    const task: Task = {
+      id: generateUUID(),
+      title: taskData.title.trim(),
+      description: taskData.description.trim(),
+      duration: durationNum,
+      startDate: selectedDate,
+      startTime: taskData.startTime,
+      endTime: taskData.endTime,
+      goalId: taskData.goalId || 'no-goal',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      const addedTask = (await taskService.addTasks([task]))[0];
+      setTasks([...tasks, addedTask]);
+      setIsAddTaskModalVisible(false);
+    } catch (error) {
+      console.error('Error adding task:', error);
+      Alert.alert('Error', 'Failed to add task');
+    }
+  };
+
   const getTasksForDate = (date: string) => {
-    console.log('Getting tasks for date:', date);
-    const tasksForDate = tasks.filter(task => {
-      // Check if task starts on this date
+    return tasks.filter(task => {
+      if (!task.startDate || !task.goalId || !task.status || !task.createdAt || !task.updatedAt) return false;
       if (task.startDate === date) {
-        console.log('Found task starting on date:', task);
         return true;
       }
-
-      // Check if task is recurring and falls on this date
       if (task.recurrence) {
         const startDate = new Date(task.startDate);
         const endDate = new Date(task.recurrence.endDate);
         const currentDate = new Date(date);
-
-        // Check if date is within recurrence range
         if (currentDate < startDate || currentDate > endDate) {
           return false;
         }
-
         const daysDiff = Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-
         const isRecurring = (() => {
           switch (task.recurrence.frequency) {
             case 'daily':
@@ -117,51 +168,45 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
             case 'weekly':
               return daysDiff % (7 * task.recurrence.interval) === 0;
             case 'monthly':
-              // Check if it's the same day of the month
-              return startDate.getDate() === currentDate.getDate() && 
-                     // Check if the number of months between dates is divisible by the interval
-                     ((currentDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                      currentDate.getMonth() - startDate.getMonth()) % task.recurrence.interval === 0;
+              return startDate.getDate() === currentDate.getDate() &&
+                ((currentDate.getFullYear() - startDate.getFullYear()) * 12 +
+                  currentDate.getMonth() - startDate.getMonth()) % task.recurrence.interval === 0;
             case 'seasonal':
-              // Check if it's the same day of the month
-              return startDate.getDate() === currentDate.getDate() && 
-                     // Check if the months are in the same season (0-2, 3-5, 6-8, 9-11)
-                     Math.floor(startDate.getMonth() / 3) === Math.floor(currentDate.getMonth() / 3) &&
-                     // Check if the number of seasons between dates is divisible by the interval
-                     ((currentDate.getFullYear() - startDate.getFullYear()) * 4 + 
-                      Math.floor(currentDate.getMonth() / 3) - Math.floor(startDate.getMonth() / 3)) % task.recurrence.interval === 0;
+              return startDate.getDate() === currentDate.getDate() &&
+                Math.floor(startDate.getMonth() / 3) === Math.floor(currentDate.getMonth() / 3) &&
+                ((currentDate.getFullYear() - startDate.getFullYear()) * 4 +
+                  Math.floor(currentDate.getMonth() / 3) - Math.floor(startDate.getMonth() / 3)) % task.recurrence.interval === 0;
             default:
               return false;
           }
         })();
-
-        if (isRecurring) {
-          console.log('Found recurring task for date:', task);
-        }
         return isRecurring;
       }
-
       return false;
     });
-    console.log('Tasks for date:', tasksForDate);
-    return tasksForDate;
   };
 
-  const getMarkedDates = () => {
+  const getMarkedDates = (tasks: Task[]) => {
     const marked: { [key: string]: any } = {};
     tasks.forEach(task => {
       if (task.recurrence) {
-        // Mark all recurring dates
         const startDate = new Date(task.startDate);
         const endDate = new Date(task.recurrence.endDate);
         let currentDate = new Date(startDate);
         while (currentDate <= endDate) {
           const dateStr = currentDate.toISOString().split('T')[0];
-          marked[dateStr] = {
-            marked: true,
-            dotColor: task.status === 'completed' ? '#34C759' : '#007AFF'
-          };
-          // Increment date based on recurrence
+          if (!marked[dateStr]) {
+            marked[dateStr] = {
+              dots: []
+            };
+          }
+          const color = task.goalId === 'life-admin' ? '#007AFF' : '#FF9500';
+          if (!marked[dateStr].dots.some((dot: any) => dot.color === color)) {
+            marked[dateStr].dots.push({
+              color,
+              key: task.id
+            });
+          }
           switch (task.recurrence.frequency) {
             case 'daily':
               currentDate.setDate(currentDate.getDate() + task.recurrence.interval);
@@ -176,273 +221,80 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
               currentDate.setMonth(currentDate.getMonth() + 3 * task.recurrence.interval);
               break;
             default:
-              currentDate = new Date(endDate.getTime() + 1); // break loop
+              currentDate = new Date(endDate.getTime() + 1);
           }
         }
       } else {
-        // Mark single date
-        marked[task.startDate] = {
-          marked: true,
-          dotColor: task.status === 'completed' ? '#34C759' : '#007AFF'
-        };
+        if (!marked[task.startDate]) {
+          marked[task.startDate] = {
+            dots: []
+          };
+        }
+        const color = task.goalId === 'life-admin' ? '#007AFF' : '#FF9500';
+        if (!marked[task.startDate].dots.some((dot: any) => dot.color === color)) {
+          marked[task.startDate].dots.push({
+            color,
+            key: task.id
+          });
+        }
       }
     });
-    marked[selectedDate] = {
-      ...marked[selectedDate],
-      selected: true,
-      selectedColor: '#007AFF'
-    };
+
+    if (marked[selectedDate]) {
+      marked[selectedDate].selected = true;
+      marked[selectedDate].selectedColor = '#007AFF';
+    }
+
     return marked;
   };
 
-  const formatTime = (time: string) => {
-    return time; // Assuming time is already in HH:MM format
-  };
-
-  const handleAddTask = async () => {
-    if (!newTask.title.trim()) {
-      Alert.alert('Error', 'Please enter a title');
-      return;
-    }
-
-    const durationNum = parseInt(newTask.duration);
-    if (isNaN(durationNum) || durationNum <= 0) {
-      Alert.alert('Error', 'Please enter a valid duration');
-      return;
-    }
-
-    if (!newTask.startTime || !newTask.endTime) {
-      Alert.alert('Error', 'Please enter both start and end times');
-      return;
-    }
-
-    const task: Task = {
-      id: generateUUID(),
-      title: newTask.title.trim(),
-      description: newTask.description.trim(),
-      duration: durationNum,
-      startDate: selectedDate,
-      startTime: newTask.startTime,
-      endTime: newTask.endTime,
-      goalId: newTask.goalId || 'no-goal',
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    try {
-      const addedTask = (await taskService.addTasks([task]))[0];
-      setTasks([...tasks, addedTask]);
-      setIsAddTaskModalVisible(false);
-      setNewTask({
-        title: '',
-        description: '',
-        duration: '',
-        startTime: '',
-        endTime: '',
-        goalId: ''
-      });
-    } catch (error) {
-      console.error('Error adding task:', error);
-      Alert.alert('Error', 'Failed to add task');
-    }
-  };
-
-  const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
-    try {
-      const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
-      if (updatedTask) {
-        const updatedTasks = await taskService.getAllTasks();
-        setTasks(updatedTasks);
-      }
-    } catch (error) {
-      console.error('Error updating task status:', error);
-      Alert.alert('Error', 'Failed to update task status');
-    }
-  };
+  const validTasks: Task[] = tasks.filter(
+    (t: any) => t && t.startDate && t.goalId && t.status && t.createdAt && t.updatedAt
+  );
 
   return (
-    <View style={styles.container}>
+    <View style={commonStyles.container}>
       <Calendar
         onDayPress={(day: { dateString: string }) => setSelectedDate(day.dateString)}
-        markedDates={getMarkedDates()}
+        markedDates={getMarkedDates(validTasks)}
+        markingType="multi-dot"
         theme={{
-          todayTextColor: '#007AFF',
-          selectedDayBackgroundColor: '#007AFF',
-          dotColor: '#007AFF',
-          arrowColor: '#007AFF',
+          todayTextColor: theme.colors.primary,
+          selectedDayBackgroundColor: theme.colors.primary,
+          dotColor: theme.colors.primary,
+          arrowColor: theme.colors.primary,
         }}
       />
-      
-      <View style={styles.tasksContainer}>
-        <Text style={styles.dateTitle}>
+      <View style={commonStyles.content}>
+        <Text style={commonStyles.title}>
           {format(parseISO(selectedDate), 'MMMM d, yyyy')}
         </Text>
-        <ScrollView style={styles.taskList}>
-          {getTasksForDate(selectedDate).map((task) => (
-            <TouchableOpacity
-              key={task.id}
-              style={styles.taskItem}
-              onPress={() => handleTaskPress(task.id)}
-            >
-              <View style={styles.taskHeader}>
-                <Text style={styles.taskTitle}>{task.title}</Text>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteTask(task.id)}
-                >
-                  <Text style={styles.deleteButtonText}>×</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.taskDescription}>{task.description}</Text>
-              <Text style={styles.taskTime}>
-                {formatTime(task.startTime)} - {formatTime(task.endTime)}
-              </Text>
-              <Text style={styles.taskGoal}>Goal: {getGoalText(task.goalId)}</Text>
-              <View style={styles.statusContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.statusButton,
-                    task.status === 'pending' && styles.statusButtonActive
-                  ]}
-                  onPress={() => handleStatusChange(task.id, 'pending')}
-                >
-                  <Text style={[
-                    styles.statusButtonText,
-                    task.status === 'pending' && styles.statusButtonTextActive
-                  ]}>Pending</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.statusButton,
-                    task.status === 'completed' && styles.statusButtonActive
-                  ]}
-                  onPress={() => handleStatusChange(task.id, 'completed')}
-                >
-                  <Text style={[
-                    styles.statusButtonText,
-                    task.status === 'completed' && styles.statusButtonTextActive
-                  ]}>Completed</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.statusButton,
-                    task.status === 'cancelled' && styles.statusButtonActive
-                  ]}
-                  onPress={() => handleStatusChange(task.id, 'cancelled')}
-                >
-                  <Text style={[
-                    styles.statusButtonText,
-                    task.status === 'cancelled' && styles.statusButtonTextActive
-                  ]}>Cancelled</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          ))}
+        <ScrollView style={commonStyles.content}>
+          <TimeGrid
+            tasks={getTasksForDate(selectedDate)}
+            onTaskPress={handleTaskPress}
+            onTaskDelete={handleDeleteTask}
+            onStatusChange={handleStatusChange}
+            getGoalText={getGoalText}
+          />
           {getTasksForDate(selectedDate).length === 0 && (
-            <Text style={styles.emptyText}>No tasks scheduled for this day</Text>
+            <Text style={commonStyles.textSecondary}>No tasks scheduled for this day</Text>
           )}
         </ScrollView>
       </View>
-
       <TouchableOpacity
-        style={styles.addButton}
+        style={[commonStyles.card, { position: 'absolute', right: 20, bottom: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: theme.colors.primary, justifyContent: 'center', alignItems: 'center', ...theme.shadows.md }]}
         onPress={() => setIsAddTaskModalVisible(true)}
       >
-        <Text style={styles.addButtonText}>+</Text>
+        <Text style={{ fontSize: 30, color: theme.colors.text.inverse, fontWeight: 'bold' }}>+</Text>
       </TouchableOpacity>
 
-      <Modal
+      <AddTaskModal
         visible={isAddTaskModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsAddTaskModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add New Task</Text>
-            
-            <TextInput
-              style={styles.input}
-              placeholder="Task Title"
-              value={newTask.title}
-              onChangeText={(text) => setNewTask({ ...newTask, title: text })}
-            />
-
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Description"
-              multiline
-              value={newTask.description}
-              onChangeText={(text) => setNewTask({ ...newTask, description: text })}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Duration (minutes)"
-              keyboardType="numeric"
-              value={newTask.duration}
-              onChangeText={(text) => setNewTask({ ...newTask, duration: text })}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Start Time (HH:MM)"
-              value={newTask.startTime}
-              onChangeText={(text) => setNewTask({ ...newTask, startTime: text })}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="End Time (HH:MM)"
-              value={newTask.endTime}
-              onChangeText={(text) => setNewTask({ ...newTask, endTime: text })}
-            />
-
-            <View style={styles.goalSelector}>
-              <Text style={styles.label}>Associated Goal (Optional)</Text>
-              <ScrollView style={styles.goalList}>
-                <TouchableOpacity
-                  style={[
-                    styles.goalOption,
-                    !newTask.goalId && styles.selectedGoal
-                  ]}
-                  onPress={() => setNewTask({ ...newTask, goalId: '' })}
-                >
-                  <Text style={styles.goalOptionText}>No Goal</Text>
-                </TouchableOpacity>
-                {goals.map((goal) => (
-                  <TouchableOpacity
-                    key={goal.id}
-                    style={[
-                      styles.goalOption,
-                      newTask.goalId === goal.id && styles.selectedGoal
-                    ]}
-                    onPress={() => setNewTask({ ...newTask, goalId: goal.id })}
-                  >
-                    <Text style={styles.goalOptionText}>{goal.text}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setIsAddTaskModalVisible(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={handleAddTask}
-              >
-                <Text style={styles.modalButtonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setIsAddTaskModalVisible(false)}
+        onSave={handleAddTask}
+        goals={goals}
+      />
     </View>
   );
 }
@@ -466,9 +318,9 @@ const styles = StyleSheet.create({
   },
   taskItem: {
     backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
@@ -476,21 +328,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   taskTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     flex: 1,
   },
   taskDescription: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 8,
-    fontStyle: 'italic',
+    marginBottom: 4,
   },
   taskTime: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#007AFF',
     marginBottom: 4,
   },
@@ -507,9 +358,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   taskGoal: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
-    marginBottom: 8,
   },
   statusBadge: {
     alignSelf: 'flex-start',
@@ -630,24 +480,55 @@ const styles = StyleSheet.create({
   },
   statusContainer: {
     flexDirection: 'row',
-    marginTop: 8,
+    gap: 8,
   },
   statusButton: {
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    marginHorizontal: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: '#e0e0e0',
   },
   statusButtonActive: {
     backgroundColor: '#007AFF',
   },
   statusButtonText: {
+    fontSize: 12,
     color: '#666',
-    fontSize: 14,
-    fontWeight: 'bold',
   },
   statusButtonTextActive: {
     color: '#fff',
+  },
+  timeGrid: {
+    flex: 1,
+  },
+  hourRow: {
+    flexDirection: 'row',
+    minHeight: HOUR_HEIGHT,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  hourLabel: {
+    width: 60,
+    padding: 8,
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  hourContent: {
+    flex: 1,
+    padding: 4,
+  },
+  completedTask: {
+    backgroundColor: '#f0f0f0',
+    borderColor: '#d0d0d0',
+  },
+  completedTaskText: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+  },
+  taskFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 }); 

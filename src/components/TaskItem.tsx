@@ -1,177 +1,168 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Card } from './Card';
-import { Badge } from './Badge';
-import { IconButton } from './IconButton';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Task } from '../types';
 import { theme } from '../theme';
-
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  startTime: Date;
-  endTime: Date;
-  status: 'pending' | 'in_progress' | 'completed';
-  priority: 'low' | 'medium' | 'high';
-}
 
 interface TaskItemProps {
   task: Task;
-  onEdit?: () => void;
-  onDelete?: () => void;
-  onStatusChange?: (status: Task['status']) => void;
-  style?: ViewStyle;
+  onPress: (taskId: string) => void;
+  onDelete: (taskId: string) => void;
+  onStatusChange: (taskId: string, status: Task['status']) => void;
+  getGoalText: (goalId: string) => string;
 }
 
 export const TaskItem: React.FC<TaskItemProps> = ({
   task,
-  onEdit,
+  onPress,
   onDelete,
   onStatusChange,
-  style,
+  getGoalText,
 }) => {
-  const getStatusVariant = (status: Task['status']): 'primary' | 'warning' | 'danger' => {
-    switch (status) {
-      case 'in_progress':
-        return 'warning';
-      case 'completed':
-        return 'primary';
-      default:
-        return 'primary';
-    }
-  };
-
-  const getPriorityVariant = (priority: Task['priority']): 'primary' | 'warning' | 'danger' => {
-    switch (priority) {
-      case 'high':
-        return 'danger';
-      case 'medium':
-        return 'warning';
-      default:
-        return 'primary';
-    }
-  };
-
-  const formatTime = (date: Date): string => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const containerStyle: ViewStyle = {
-    ...styles.container,
-    ...(style || {}),
-  };
-
   return (
-    <Card style={containerStyle}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{task.title}</Text>
-        <View style={styles.actions}>
-          {onEdit && (
-            <IconButton
-              name="pencil"
-              onPress={onEdit}
-              size={20}
-              color={theme.colors.text.secondary}
-            />
-          )}
-          {onDelete && (
-            <IconButton
-              name="trash"
-              onPress={onDelete}
-              size={20}
-              color={theme.colors.danger}
-            />
-          )}
-        </View>
-      </View>
-
-      {task.description && (
-        <Text style={styles.description}>{task.description}</Text>
-      )}
-
-      <View style={styles.timeContainer}>
-        <Text style={styles.timeText}>
-          {formatTime(task.startTime)} - {formatTime(task.endTime)}
+    <TouchableOpacity
+      style={[
+        styles.taskItem,
+        task.status === 'completed' && styles.completedTask,
+        { borderLeftWidth: 6, borderLeftColor: task.goalId === 'life-admin' ? theme.colors.primary : theme.colors.warning }
+      ]}
+      onPress={() => onPress(task.id)}
+    >
+      <View style={styles.taskHeader}>
+        <Text style={[
+          styles.taskTitle,
+          task.status === 'completed' && styles.completedTaskText
+        ]}>
+          {task.title}
         </Text>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => onDelete(task.id)}
+        >
+          <Text style={styles.deleteButtonText}>×</Text>
+        </TouchableOpacity>
       </View>
-
-      <View style={styles.badges}>
-        <Badge
-          label={task.status.replace('_', ' ')}
-          variant={getStatusVariant(task.status)}
-        />
-        <Badge
-          label={task.priority}
-          variant={getPriorityVariant(task.priority)}
-        />
-      </View>
-
-      {onStatusChange && (
-        <View style={styles.statusButtons}>
-          <IconButton
-            name="time"
-            onPress={() => onStatusChange('pending')}
-            variant={task.status === 'pending' ? 'primary' : 'default'}
-            size={20}
-          />
-          <IconButton
-            name="play"
-            onPress={() => onStatusChange('in_progress')}
-            variant={task.status === 'in_progress' ? 'secondary' : 'default'}
-            size={20}
-          />
-          <IconButton
-            name="checkmark"
-            onPress={() => onStatusChange('completed')}
-            variant={task.status === 'completed' ? 'primary' : 'default'}
-            size={20}
-          />
+      <Text style={[
+        styles.taskDescription,
+        task.status === 'completed' && styles.completedTaskText
+      ]}>
+        {task.description}
+      </Text>
+      <Text style={[
+        styles.taskTime,
+        task.status === 'completed' && styles.completedTaskText
+      ]}>
+        {task.startTime} - {task.endTime}
+      </Text>
+      <View style={styles.taskFooter}>
+        <Text style={[
+          styles.taskGoal,
+          task.status === 'completed' && styles.completedTaskText
+        ]}>
+          {getGoalText(task.goalId)}
+        </Text>
+        <View style={styles.statusContainer}>
+          <TouchableOpacity
+            style={[
+              styles.statusButton,
+              task.status === 'pending' && styles.statusButtonActive
+            ]}
+            onPress={() => onStatusChange(task.id, 'pending')}
+          >
+            <Text style={[
+              styles.statusButtonText,
+              task.status === 'pending' && styles.statusButtonTextActive
+            ]}>Pending</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.statusButton,
+              task.status === 'completed' && styles.statusButtonActive
+            ]}
+            onPress={() => onStatusChange(task.id, 'completed')}
+          >
+            <Text style={[
+              styles.statusButtonText,
+              task.status === 'completed' && styles.statusButtonTextActive
+            ]}>Completed</Text>
+          </TouchableOpacity>
         </View>
-      )}
-    </Card>
+      </View>
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: theme.spacing.md,
+  taskItem: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  header: {
+  taskHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 4,
   },
-  title: {
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: '600' as const,
-    color: theme.colors.text.primary,
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
     flex: 1,
   },
-  actions: {
+  taskDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  taskTime: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginBottom: 4,
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  deleteButtonText: {
+    fontSize: 24,
+    color: '#FF3B30',
+  },
+  taskGoal: {
+    fontSize: 12,
+    color: '#666',
+  },
+  statusContainer: {
     flexDirection: 'row',
-    gap: theme.spacing.xs,
+    gap: 8,
   },
-  description: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.sm,
+  statusButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: '#e0e0e0',
   },
-  timeContainer: {
-    marginBottom: theme.spacing.sm,
+  statusButtonActive: {
+    backgroundColor: '#007AFF',
   },
-  timeText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.secondary,
+  statusButtonText: {
+    fontSize: 12,
+    color: '#666',
   },
-  badges: {
+  statusButtonTextActive: {
+    color: '#fff',
+  },
+  completedTask: {
+    backgroundColor: '#f0f0f0',
+    borderColor: '#d0d0d0',
+  },
+  completedTaskText: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+  },
+  taskFooter: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-  },
-  statusButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: theme.spacing.sm,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 }); 
