@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { taskService } from '../services/taskService';
 import { goalService } from '../services/goalService';
 import { Task, Goal } from '../types';
@@ -30,7 +30,7 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   });
 
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
       const allTasks = taskService.getAllTasks();
       const allGoals = goalService.getAllGoals();
       setTasks(allTasks);
@@ -41,10 +41,19 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   }, []);
 
   useEffect(() => {
-    if (route.params?.tasks) {
-      const newTasks = taskService.addTasks(route.params.tasks);
-      setTasks(prevTasks => [...prevTasks, ...newTasks]);
-    }
+    const handleNewTasks = async () => {
+      if (route.params?.tasks) {
+        try {
+          const newTasks = await taskService.addTasks(route.params.tasks);
+          setTasks(prevTasks => [...prevTasks, ...newTasks]);
+        } catch (error) {
+          console.error('Error adding tasks:', error);
+          Alert.alert('Error', 'Failed to add tasks to calendar');
+        }
+      }
+    };
+
+    handleNewTasks();
   }, [route.params?.tasks]);
 
   const getGoalText = (goalId: string) => {
@@ -56,9 +65,14 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     navigation.navigate('TaskEdit', { taskId });
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    taskService.deleteTask(taskId);
-    setTasks(taskService.getAllTasks());
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await taskService.deleteTask(taskId);
+      setTasks(taskService.getAllTasks());
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      Alert.alert('Error', 'Failed to delete task');
+    }
   };
 
   const getTasksForDate = (date: string) => {
@@ -85,7 +99,7 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     return time; // Assuming time is already in HH:MM format
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!newTask.title.trim()) {
       Alert.alert('Error', 'Please enter a title');
       return;
@@ -116,23 +130,33 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
       updatedAt: new Date().toISOString()
     };
 
-    const addedTask = taskService.addTasks([task])[0];
-    setTasks([...tasks, addedTask]);
-    setIsAddTaskModalVisible(false);
-    setNewTask({
-      title: '',
-      description: '',
-      duration: '',
-      startTime: '',
-      endTime: '',
-      goalId: ''
-    });
+    try {
+      const addedTask = (await taskService.addTasks([task]))[0];
+      setTasks([...tasks, addedTask]);
+      setIsAddTaskModalVisible(false);
+      setNewTask({
+        title: '',
+        description: '',
+        duration: '',
+        startTime: '',
+        endTime: '',
+        goalId: ''
+      });
+    } catch (error) {
+      console.error('Error adding task:', error);
+      Alert.alert('Error', 'Failed to add task');
+    }
   };
 
-  const handleStatusChange = (taskId: string, newStatus: Task['status']) => {
-    const updatedTask = taskService.updateTask(taskId, { status: newStatus });
-    if (updatedTask) {
-      setTasks(tasks.map(task => task.id === taskId ? updatedTask : task));
+  const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
+    try {
+      const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
+      if (updatedTask) {
+        setTasks(tasks.map(task => task.id === taskId ? updatedTask : task));
+      }
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      Alert.alert('Error', 'Failed to update task status');
     }
   };
 

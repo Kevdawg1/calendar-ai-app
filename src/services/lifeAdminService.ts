@@ -1,0 +1,144 @@
+import axios from 'axios';
+import { LifeAdminTask } from '../data/lifeAdminTasks';
+import { Task } from '../types';
+import { generateUUID } from '../utils/uuid';
+
+const ENDPOINT = 'https://calendar-ai.openai.azure.com/';
+const API_KEY = 'E5iUsb1W3fHZgYHoxYagSAPHqEe9l9hInO1wJYnD2Th4JOhCPaCiJQQJ99BFACL93NaXJ3w3AAAAACOGKXdj';
+const DEPLOYMENT = 'gpt-35-turbo';
+
+export const lifeAdminService = {
+  scheduleTasks: async (tasks: LifeAdminTask[]): Promise<Task[]> => {
+    try {
+      console.log('Starting task scheduling for life admin tasks:', tasks);
+
+      // Group tasks by category
+      const tasksByCategory = tasks.reduce((acc, task) => {
+        if (!acc[task.category]) {
+          acc[task.category] = [];
+        }
+        acc[task.category].push(task);
+        return acc;
+      }, {} as Record<string, LifeAdminTask[]>);
+
+      // Schedule tasks for each category separately
+      const allScheduledTasks: Task[] = [];
+      
+      for (const [category, categoryTasks] of Object.entries(tasksByCategory)) {
+        console.log(`Scheduling tasks for category: ${category}`);
+        
+        const prompt = `
+        Schedule the following life admin tasks into a calendar:
+        ${categoryTasks.map(task => `
+          - ${task.title}
+            Category: ${task.category}
+            Frequency: ${task.frequency}
+        `).join('\n')}
+
+        For each task, create a recurring calendar event with the following rules:
+        - Daily tasks: Repeat every day
+        - Weekly tasks: Repeat every week
+        - Monthly tasks: Repeat every month
+        - Seasonal tasks: Repeat every 3 months
+
+        For each task, provide a JSON object with:
+        - title: string (from task)
+        - description: string (include category and frequency)
+        - duration: number (in minutes, estimate based on task type)
+        - startDate: string (YYYY-MM-DD, start from tomorrow)
+        - startTime: string (HH:MM, suggest appropriate time based on task type)
+        - endTime: string (HH:MM)
+        - recurrence: object
+          - frequency: string (daily/weekly/monthly/seasonal)
+          - interval: number (1 for daily/weekly/monthly, 3 for seasonal)
+          - endDate: string (YYYY-MM-DD, 1 year from start date)
+
+        Consider:
+        - Group similar tasks together
+        - Schedule tasks at appropriate times (e.g., morning for personal care, evening for cleaning)
+        - Allow buffer time between tasks
+        - Consider task dependencies
+        - Spread tasks across the week/month to avoid clustering
+        - For ${category} tasks, consider typical times for these activities
+
+        Return ONLY a JSON array of these task objects.
+        `;
+
+        console.log('Sending scheduling prompt for category:', category);
+        const response = await makeOpenAIRequest(prompt);
+        console.log('Received scheduling response for category:', category);
+
+        let scheduledTasks;
+        try {
+          const parsedResponse = JSON.parse(response);
+          scheduledTasks = Array.isArray(parsedResponse) ? parsedResponse : parsedResponse.tasks;
+          if (!scheduledTasks || !Array.isArray(scheduledTasks)) {
+            throw new Error('Invalid tasks format');
+          }
+        } catch (error) {
+          console.error('Error parsing scheduled tasks for category:', category, error);
+          throw new Error(`Failed to parse scheduled tasks response for category: ${category}`);
+        }
+
+        // Add metadata to tasks
+        const tasksWithMetadata = scheduledTasks.map((task: any) => ({
+          ...task,
+          id: generateUUID(),
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }));
+
+        allScheduledTasks.push(...tasksWithMetadata);
+      }
+
+      console.log('Final scheduled tasks:', allScheduledTasks);
+      return allScheduledTasks;
+
+    } catch (error) {
+      console.error('Error scheduling tasks:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`API Error: ${error.response?.data?.error?.message || error.message}`);
+      }
+      throw error;
+    }
+  }
+};
+
+async function makeOpenAIRequest(prompt: string): Promise<string> {
+  console.log('Making OpenAI request with prompt:', prompt);
+  
+  const response = await axios.post(
+    `${ENDPOINT}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview`,
+    {
+      messages: [
+        {
+          role: "system",
+          content: "You are an AI assistant helping to schedule recurring life admin tasks. Provide clear, specific, and well-reasoned responses. Always return valid JSON."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 4000,
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': API_KEY
+      }
+    }
+  );
+
+  if (!response.data.choices?.[0]?.message?.content) {
+    console.error('Invalid response format:', response.data);
+    throw new Error('Invalid response format from OpenAI');
+  }
+
+  const content = response.data.choices[0].message.content;
+  console.log('OpenAI response content:', content);
+  return content;
+} 

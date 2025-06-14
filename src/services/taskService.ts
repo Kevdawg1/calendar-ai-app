@@ -1,8 +1,35 @@
 import { Task, TaskUpdate } from '../types';
 import { generateUUID } from '../utils/uuid';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// In a real application, this would be replaced with a database
+const TASKS_STORAGE_KEY = '@calendar_ai_tasks';
+
+// Initialize tasks from storage
 let tasks: Task[] = [];
+
+// Load tasks from storage on service initialization
+const loadTasks = async () => {
+  try {
+    const storedTasks = await AsyncStorage.getItem(TASKS_STORAGE_KEY);
+    if (storedTasks) {
+      tasks = JSON.parse(storedTasks);
+    }
+  } catch (error) {
+    console.error('Error loading tasks from storage:', error);
+  }
+};
+
+// Save tasks to storage
+const saveTasks = async () => {
+  try {
+    await AsyncStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
+  } catch (error) {
+    console.error('Error saving tasks to storage:', error);
+  }
+};
+
+// Initialize tasks
+loadTasks();
 
 export const taskService = {
   getAllTasks: (): Task[] => {
@@ -17,7 +44,7 @@ export const taskService = {
     return tasks.filter(task => task.goalId === goalId);
   },
 
-  updateTask: (taskId: string, updates: TaskUpdate): Task | undefined => {
+  updateTask: async (taskId: string, updates: TaskUpdate): Promise<Task | undefined> => {
     const taskIndex = tasks.findIndex(task => task.id === taskId);
     if (taskIndex === -1) return undefined;
 
@@ -28,14 +55,16 @@ export const taskService = {
     };
 
     tasks[taskIndex] = updatedTask;
+    await saveTasks();
     return updatedTask;
   },
 
-  deleteTask: (taskId: string): void => {
+  deleteTask: async (taskId: string): Promise<void> => {
     tasks = tasks.filter(task => task.id !== taskId);
+    await saveTasks();
   },
 
-  addTasks: (newTasks: Task[]): Task[] => {
+  addTasks: async (newTasks: Task[]): Promise<Task[]> => {
     const tasksWithIds = newTasks.map(task => ({
       ...task,
       id: generateUUID(),
@@ -45,6 +74,7 @@ export const taskService = {
     }));
 
     tasks.push(...tasksWithIds);
+    await saveTasks();
     return tasksWithIds;
   }
 }; 
