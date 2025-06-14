@@ -1,24 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, FlatList } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { goalService } from '../services/goalService';
 import { openaiService } from '../services/openaiService';
 import { Goal, Task } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { theme } from '../theme';
+import { Section } from '../components/Section';
+import { EmptyState } from '../components/EmptyState';
+import { Button as CustomButton } from '../components/Button';
 
-type GoalsScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Goals'>;
-};
+type NavigationProp = StackNavigationProp<RootStackParamList>;
 
-export default function GoalsScreen({ navigation }: GoalsScreenProps) {
+export const GoalsScreen = () => {
+  const navigation = useNavigation<NavigationProp>();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [newGoalText, setNewGoalText] = useState('');
   const [selectedType, setSelectedType] = useState<'short' | 'medium' | 'long'>('short');
   const [selectedPriority, setSelectedPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [timeCommitment, setTimeCommitment] = useState('5');
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
   useEffect(() => {
     const loadGoals = () => {
@@ -30,7 +33,6 @@ export default function GoalsScreen({ navigation }: GoalsScreenProps) {
   }, []);
 
   useEffect(() => {
-    // Add Calendar button to navigation header
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
@@ -67,45 +69,6 @@ export default function GoalsScreen({ navigation }: GoalsScreenProps) {
     setTimeCommitment('5');
   };
 
-  const handleEditGoal = (goal: Goal) => {
-    setEditingGoal(goal);
-    setNewGoalText(goal.text);
-    setSelectedType(goal.type);
-    setSelectedPriority(goal.priority);
-    setTimeCommitment(goal.timeCommitment.toString());
-    setIsEditModalVisible(true);
-  };
-
-  const handleSaveEdit = () => {
-    if (!editingGoal) return;
-
-    if (!newGoalText.trim()) {
-      Alert.alert('Error', 'Please enter a goal');
-      return;
-    }
-
-    const hours = parseInt(timeCommitment);
-    if (isNaN(hours) || hours <= 0) {
-      Alert.alert('Error', 'Please enter a valid time commitment');
-      return;
-    }
-
-    const updatedGoal = goalService.updateGoal(editingGoal.id, {
-      text: newGoalText.trim(),
-      type: selectedType,
-      priority: selectedPriority,
-      timeCommitment: hours
-    });
-
-    if (updatedGoal) {
-      setGoals(goals.map(goal => goal.id === editingGoal.id ? updatedGoal : goal));
-      setIsEditModalVisible(false);
-      setEditingGoal(null);
-      setNewGoalText('');
-      setTimeCommitment('5');
-    }
-  };
-
   const handleDeleteGoal = (goalId: string) => {
     Alert.alert(
       'Delete Goal',
@@ -130,13 +93,29 @@ export default function GoalsScreen({ navigation }: GoalsScreenProps) {
   const handleGenerateTasks = async (goal: Goal) => {
     try {
       const tasks = await openaiService.generateTasks([goal]);
-      navigation.navigate('Calendar', { tasks });
+      if (tasks && tasks.length > 0) {
+        const calendarTasks = tasks.map(task => ({
+          id: task.id,
+          title: task.title,
+          description: task.description || '',
+          duration: task.duration,
+          startDate: task.startDate,
+          startTime: task.startTime,
+          endTime: task.endTime,
+          goalId: goal.id,
+          status: 'pending' as const,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt
+        }));
+        navigation.navigate('Calendar', { tasks: calendarTasks });
+      }
     } catch (error) {
+      console.error('Error generating tasks:', error);
       Alert.alert('Error', 'Failed to generate tasks. Please try again.');
     }
   };
 
-  const renderGoalForm = (isEditing = false) => (
+  const renderGoalForm = () => (
     <View style={styles.inputContainer}>
       <TextInput
         style={styles.input}
@@ -262,161 +241,208 @@ export default function GoalsScreen({ navigation }: GoalsScreenProps) {
 
       <TouchableOpacity
         style={styles.addButton}
-        onPress={isEditing ? handleSaveEdit : handleAddGoal}
+        onPress={handleAddGoal}
       >
-        <Text style={styles.addButtonText}>
-          {isEditing ? 'Save Changes' : 'Add Goal'}
-        </Text>
+        <Text style={styles.addButtonText}>Add Goal</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderGoalItem = ({ item }: { item: Goal }) => (
+    <View style={styles.goalItem}>
+      <View style={styles.goalHeader}>
+        <Text style={styles.goalTitle}>{item.text}</Text>
+        <View style={styles.goalActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleDeleteGoal(item.id)}
+          >
+            <Ionicons name="trash" size={20} color={theme.colors.danger} />
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.goalDetails}>
+        <Text style={styles.goalType}>Type: {item.type}</Text>
+        <Text style={styles.goalPriority}>Priority: {item.priority}</Text>
+        <Text style={styles.goalTime}>Weekly Time: {item.timeCommitment} hours</Text>
+      </View>
+      <TouchableOpacity
+        style={styles.generateButton}
+        onPress={() => handleGenerateTasks(item)}
+      >
+        <Ionicons name="calendar-outline" size={20} color="#fff" />
+        <Text style={styles.generateButtonText}>Generate Tasks</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {!isEditModalVisible && renderGoalForm()}
+      <Section title="">
+        {goals.length === 0 ? (
+          <EmptyState
+            icon="flag"
+            title="No Goals Yet"
+            message="Add your first goal to get started"
+          />
+        ) : (
+          <FlatList
+            data={goals}
+            renderItem={renderGoalItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.goalsList}
+          />
+        )}
+      </Section>
 
-      <ScrollView style={styles.goalsList}>
-        {goals.map((goal) => (
-          <View key={goal.id} style={styles.goalItem}>
-            <View style={styles.goalHeader}>
-              <Text style={styles.goalText}>{goal.text}</Text>
-              <View style={styles.goalActions}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => handleEditGoal(goal)}
-                >
-                  <Ionicons name="pencil" size={20} color="#007AFF" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteGoal(goal.id)}
-                >
-                  <Ionicons name="trash" size={20} color="#FF3B30" />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.goalDetails}>
-              <View style={styles.goalDetail}>
-                <Ionicons name="time-outline" size={16} color="#666" />
-                <Text style={styles.goalType}>Type: {goal.type}</Text>
-              </View>
-              <View style={styles.goalDetail}>
-                <Ionicons name="flag-outline" size={16} color="#666" />
-                <Text style={styles.goalPriority}>Priority: {goal.priority}</Text>
-              </View>
-              <View style={styles.goalDetail}>
-                <Ionicons name="hourglass-outline" size={16} color="#666" />
-                <Text style={styles.goalTime}>Weekly Time: {goal.timeCommitment} hours</Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.generateButton}
-              onPress={() => handleGenerateTasks(goal)}
-            >
-              <Ionicons name="calendar-outline" size={20} color="#fff" />
-              <Text style={styles.generateButtonText}>Generate Tasks</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-
-      <Modal
-        visible={isEditModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsEditModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Goal</Text>
-            {renderGoalForm(true)}
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={() => {
-                setIsEditModalVisible(false);
-                setEditingGoal(null);
-                setNewGoalText('');
-                setTimeCommitment('5');
-              }}
-            >
-              <Text style={styles.modalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {renderGoalForm()}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
+  },
+  description: {
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.lg,
+  },
+  addButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+    marginTop: theme.spacing.md,
+  },
+  navButton: {
+    marginBottom: theme.spacing.md,
+  },
+  goalsList: {
+    paddingBottom: theme.spacing.xl,
   },
   headerButton: {
-    marginRight: 16,
-    padding: 8,
+    marginRight: theme.spacing.md,
+    padding: theme.spacing.sm,
   },
   inputContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    padding: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
   input: {
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.primary,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
-    minHeight: 80,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  goalItem: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    ...theme.shadows.sm,
+  },
+  goalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  goalTitle: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    flex: 1,
+  },
+  goalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: theme.spacing.sm,
+  },
+  actionButton: {
+    marginLeft: theme.spacing.md,
+  },
+  goalDetails: {
+    marginBottom: theme.spacing.sm,
+  },
+  goalType: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+  },
+  goalPriority: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+  },
+  goalTime: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+  },
+  generateButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  generateButtonText: {
+    color: '#fff',
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.bold,
+    marginLeft: theme.spacing.md,
   },
   sectionLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#333',
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.bold,
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.text.secondary,
   },
   typeContainer: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   typeButton: {
     flex: 1,
-    padding: 8,
+    padding: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#007AFF',
-    marginHorizontal: 4,
-    borderRadius: 8,
+    borderColor: theme.colors.primary,
+    marginHorizontal: theme.spacing.xs,
+    borderRadius: theme.borderRadius.md,
     alignItems: 'center',
   },
   selectedType: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
   },
   typeText: {
-    color: '#007AFF',
+    color: theme.colors.primary,
   },
   selectedTypeText: {
     color: '#fff',
   },
   priorityContainer: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   priorityButton: {
     flex: 1,
-    padding: 8,
+    padding: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#007AFF',
-    marginHorizontal: 4,
-    borderRadius: 8,
+    borderColor: theme.colors.primary,
+    marginHorizontal: theme.spacing.xs,
+    borderRadius: theme.borderRadius.md,
     alignItems: 'center',
   },
   selectedPriority: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
   },
   priorityText: {
-    color: '#007AFF',
+    color: theme.colors.primary,
   },
   selectedPriorityText: {
     color: '#fff',
@@ -424,132 +450,23 @@ const styles = StyleSheet.create({
   timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   timeLabel: {
     flex: 1,
-    fontSize: 16,
+    fontSize: theme.typography.sizes.sm,
   },
   timeInput: {
     width: 60,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 8,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.sm,
     textAlign: 'center',
-  },
-  addButton: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
   },
   addButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  goalsList: {
-    flex: 1,
-    padding: 16,
-  },
-  goalItem: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  goalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  goalText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-    marginRight: 8,
-  },
-  goalActions: {
-    flexDirection: 'row',
-  },
-  editButton: {
-    padding: 4,
-    marginRight: 8,
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  goalDetails: {
-    marginBottom: 12,
-  },
-  goalDetail: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  goalType: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 4,
-  },
-  goalPriority: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 4,
-  },
-  goalTime: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 4,
-  },
-  generateButton: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  generateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalButton: {
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-  cancelButton: {
-    backgroundColor: '#FF3B30',
-  },
-  modalButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.bold,
   },
 }); 

@@ -19,6 +19,11 @@ export interface Task {
   status: 'pending' | 'completed' | 'cancelled';
   createdAt: string;
   updatedAt: string;
+  recurrence?: {
+    frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal';
+    interval: number;
+    endDate: string;
+  };
 }
 
 export interface TaskUpdate {
@@ -29,4 +34,9 @@ export interface TaskUpdate {
   startTime?: string;
   endTime?: string;
   status?: 'pending' | 'completed' | 'cancelled';
+  recurrence?: {
+    frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal';
+    interval: number;
+    endDate: string;
+  };
 } 

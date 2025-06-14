@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { taskService } from '../services/taskService';
 import { goalService } from '../services/goalService';
 import { Task, Goal } from '../types';
@@ -30,8 +30,8 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   });
 
   useEffect(() => {
-    const loadData = () => {
-      const allTasks = taskService.getAllTasks();
+    const loadData = async () => {
+      const allTasks = await taskService.getAllTasks();
       const allGoals = goalService.getAllGoals();
       setTasks(allTasks);
       setGoals(allGoals);
@@ -41,13 +41,34 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   }, []);
 
   useEffect(() => {
-    if (route.params?.tasks) {
-      const newTasks = taskService.addTasks(route.params.tasks);
-      setTasks(prevTasks => [...prevTasks, ...newTasks]);
-    }
+    const handleNewTasks = async () => {
+      if (route.params?.tasks) {
+        try {
+          console.log('Received tasks from route params:', route.params.tasks);
+          const newTasks = await taskService.addTasks(route.params.tasks);
+          console.log('Added tasks to service:', newTasks);
+          setTasks(prevTasks => {
+            // Filter out any existing tasks with the same IDs
+            const existingTaskIds = new Set(newTasks.map(task => task.id));
+            const filteredPrevTasks = prevTasks.filter(task => !existingTaskIds.has(task.id));
+            const updatedTasks = [...filteredPrevTasks, ...newTasks];
+            console.log('Updated tasks state:', updatedTasks);
+            return updatedTasks;
+          });
+        } catch (error) {
+          console.error('Error adding tasks:', error);
+          Alert.alert('Error', 'Failed to add tasks to calendar');
+        }
+      }
+    };
+
+    handleNewTasks();
   }, [route.params?.tasks]);
 
   const getGoalText = (goalId: string) => {
+    if (goalId === 'life-admin') {
+      return 'Life Admin';
+    }
     const goal = goals.find(g => g.id === goalId);
     return goal ? goal.text : 'Unknown Goal';
   };
@@ -56,22 +77,115 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     navigation.navigate('TaskEdit', { taskId });
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    taskService.deleteTask(taskId);
-    setTasks(taskService.getAllTasks());
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await taskService.deleteTask(taskId);
+      const updatedTasks = await taskService.getAllTasks();
+      setTasks(updatedTasks);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      Alert.alert('Error', 'Failed to delete task');
+    }
   };
 
   const getTasksForDate = (date: string) => {
-    return tasks.filter(task => task.startDate === date);
+    console.log('Getting tasks for date:', date);
+    const tasksForDate = tasks.filter(task => {
+      // Check if task starts on this date
+      if (task.startDate === date) {
+        console.log('Found task starting on date:', task);
+        return true;
+      }
+
+      // Check if task is recurring and falls on this date
+      if (task.recurrence) {
+        const startDate = new Date(task.startDate);
+        const endDate = new Date(task.recurrence.endDate);
+        const currentDate = new Date(date);
+
+        // Check if date is within recurrence range
+        if (currentDate < startDate || currentDate > endDate) {
+          return false;
+        }
+
+        const daysDiff = Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        const isRecurring = (() => {
+          switch (task.recurrence.frequency) {
+            case 'daily':
+              return true;
+            case 'weekly':
+              return daysDiff % (7 * task.recurrence.interval) === 0;
+            case 'monthly':
+              // Check if it's the same day of the month
+              return startDate.getDate() === currentDate.getDate() && 
+                     // Check if the number of months between dates is divisible by the interval
+                     ((currentDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                      currentDate.getMonth() - startDate.getMonth()) % task.recurrence.interval === 0;
+            case 'seasonal':
+              // Check if it's the same day of the month
+              return startDate.getDate() === currentDate.getDate() && 
+                     // Check if the months are in the same season (0-2, 3-5, 6-8, 9-11)
+                     Math.floor(startDate.getMonth() / 3) === Math.floor(currentDate.getMonth() / 3) &&
+                     // Check if the number of seasons between dates is divisible by the interval
+                     ((currentDate.getFullYear() - startDate.getFullYear()) * 4 + 
+                      Math.floor(currentDate.getMonth() / 3) - Math.floor(startDate.getMonth() / 3)) % task.recurrence.interval === 0;
+            default:
+              return false;
+          }
+        })();
+
+        if (isRecurring) {
+          console.log('Found recurring task for date:', task);
+        }
+        return isRecurring;
+      }
+
+      return false;
+    });
+    console.log('Tasks for date:', tasksForDate);
+    return tasksForDate;
   };
 
   const getMarkedDates = () => {
     const marked: { [key: string]: any } = {};
     tasks.forEach(task => {
-      marked[task.startDate] = {
-        marked: true,
-        dotColor: task.status === 'completed' ? '#34C759' : '#007AFF'
-      };
+      if (task.recurrence) {
+        // Mark all recurring dates
+        const startDate = new Date(task.startDate);
+        const endDate = new Date(task.recurrence.endDate);
+        let currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+          const dateStr = currentDate.toISOString().split('T')[0];
+          marked[dateStr] = {
+            marked: true,
+            dotColor: task.status === 'completed' ? '#34C759' : '#007AFF'
+          };
+          // Increment date based on recurrence
+          switch (task.recurrence.frequency) {
+            case 'daily':
+              currentDate.setDate(currentDate.getDate() + task.recurrence.interval);
+              break;
+            case 'weekly':
+              currentDate.setDate(currentDate.getDate() + 7 * task.recurrence.interval);
+              break;
+            case 'monthly':
+              currentDate.setMonth(currentDate.getMonth() + task.recurrence.interval);
+              break;
+            case 'seasonal':
+              currentDate.setMonth(currentDate.getMonth() + 3 * task.recurrence.interval);
+              break;
+            default:
+              currentDate = new Date(endDate.getTime() + 1); // break loop
+          }
+        }
+      } else {
+        // Mark single date
+        marked[task.startDate] = {
+          marked: true,
+          dotColor: task.status === 'completed' ? '#34C759' : '#007AFF'
+        };
+      }
     });
     marked[selectedDate] = {
       ...marked[selectedDate],
@@ -85,7 +199,7 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     return time; // Assuming time is already in HH:MM format
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!newTask.title.trim()) {
       Alert.alert('Error', 'Please enter a title');
       return;
@@ -116,23 +230,34 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
       updatedAt: new Date().toISOString()
     };
 
-    const addedTask = taskService.addTasks([task])[0];
-    setTasks([...tasks, addedTask]);
-    setIsAddTaskModalVisible(false);
-    setNewTask({
-      title: '',
-      description: '',
-      duration: '',
-      startTime: '',
-      endTime: '',
-      goalId: ''
-    });
+    try {
+      const addedTask = (await taskService.addTasks([task]))[0];
+      setTasks([...tasks, addedTask]);
+      setIsAddTaskModalVisible(false);
+      setNewTask({
+        title: '',
+        description: '',
+        duration: '',
+        startTime: '',
+        endTime: '',
+        goalId: ''
+      });
+    } catch (error) {
+      console.error('Error adding task:', error);
+      Alert.alert('Error', 'Failed to add task');
+    }
   };
 
-  const handleStatusChange = (taskId: string, newStatus: Task['status']) => {
-    const updatedTask = taskService.updateTask(taskId, { status: newStatus });
-    if (updatedTask) {
-      setTasks(tasks.map(task => task.id === taskId ? updatedTask : task));
+  const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
+    try {
+      const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
+      if (updatedTask) {
+        const updatedTasks = await taskService.getAllTasks();
+        setTasks(updatedTasks);
+      }
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      Alert.alert('Error', 'Failed to update task status');
     }
   };
 

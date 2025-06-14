@@ -2,58 +2,29 @@ import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { theme } from '../theme';
 
-type BadgeVariant = 'primary' | 'secondary' | 'danger' | 'warning';
-
-interface BadgeProps {
+export interface BadgeProps {
   label: string;
-  variant?: BadgeVariant;
+  color?: string;
   style?: ViewStyle;
 }
 
-export const Badge: React.FC<BadgeProps> = ({
-  label,
-  variant = 'primary',
-  style,
-}) => {
-  const getVariantStyles = (): ViewStyle => {
-    switch (variant) {
-      case 'secondary':
-        return {
-          backgroundColor: theme.colors.secondary,
-        };
-      case 'danger':
-        return {
-          backgroundColor: theme.colors.danger,
-        };
-      case 'warning':
-        return {
-          backgroundColor: theme.colors.warning,
-        };
-      default:
-        return {
-          backgroundColor: theme.colors.primary,
-        };
-    }
-  };
-
+export const Badge: React.FC<BadgeProps> = ({ label, color = theme.colors.primary, style }) => {
   return (
-    <View style={[styles.badge, getVariantStyles(), style]}>
-      <Text style={styles.text}>{label}</Text>
+    <View style={[styles.container, { backgroundColor: color }, style]}>
+      <Text style={styles.label}>{label}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  badge: {
+  container: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.round,
-    alignSelf: 'flex-start',
+    borderRadius: theme.borderRadius.full,
   },
-  text: {
-    color: theme.colors.text.inverse,
+  label: {
     fontSize: theme.typography.sizes.xs,
-    fontWeight: '600' as const,
-    textTransform: 'uppercase',
+    color: theme.colors.white,
+    fontWeight: theme.typography.weights.medium,
   },
 }); 
