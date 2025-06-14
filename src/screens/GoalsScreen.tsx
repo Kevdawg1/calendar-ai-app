@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Modal } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation';
 import { goalService } from '../services/goalService';
 import { openaiService } from '../services/openaiService';
 import { Goal, Task } from '../types';
+import { Ionicons } from '@expo/vector-icons';
 
 type GoalsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Goals'>;
@@ -16,6 +17,8 @@ export default function GoalsScreen({ navigation }: GoalsScreenProps) {
   const [selectedType, setSelectedType] = useState<'short' | 'medium' | 'long'>('short');
   const [selectedPriority, setSelectedPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [timeCommitment, setTimeCommitment] = useState('5');
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
   useEffect(() => {
     const loadGoals = () => {
@@ -25,6 +28,20 @@ export default function GoalsScreen({ navigation }: GoalsScreenProps) {
 
     loadGoals();
   }, []);
+
+  useEffect(() => {
+    // Add Calendar button to navigation header
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => navigation.navigate('Calendar', {})}
+        >
+          <Ionicons name="calendar" size={24} color="#fff" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const handleAddGoal = () => {
     if (!newGoalText.trim()) {
@@ -48,6 +65,45 @@ export default function GoalsScreen({ navigation }: GoalsScreenProps) {
     setGoals([...goals, newGoal]);
     setNewGoalText('');
     setTimeCommitment('5');
+  };
+
+  const handleEditGoal = (goal: Goal) => {
+    setEditingGoal(goal);
+    setNewGoalText(goal.text);
+    setSelectedType(goal.type);
+    setSelectedPriority(goal.priority);
+    setTimeCommitment(goal.timeCommitment.toString());
+    setIsEditModalVisible(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingGoal) return;
+
+    if (!newGoalText.trim()) {
+      Alert.alert('Error', 'Please enter a goal');
+      return;
+    }
+
+    const hours = parseInt(timeCommitment);
+    if (isNaN(hours) || hours <= 0) {
+      Alert.alert('Error', 'Please enter a valid time commitment');
+      return;
+    }
+
+    const updatedGoal = goalService.updateGoal(editingGoal.id, {
+      text: newGoalText.trim(),
+      type: selectedType,
+      priority: selectedPriority,
+      timeCommitment: hours
+    });
+
+    if (updatedGoal) {
+      setGoals(goals.map(goal => goal.id === editingGoal.id ? updatedGoal : goal));
+      setIsEditModalVisible(false);
+      setEditingGoal(null);
+      setNewGoalText('');
+      setTimeCommitment('5');
+    }
   };
 
   const handleDeleteGoal = (goalId: string) => {
@@ -80,97 +136,214 @@ export default function GoalsScreen({ navigation }: GoalsScreenProps) {
     }
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={newGoalText}
-          onChangeText={setNewGoalText}
-          placeholder="Enter your life goal"
-          multiline
-        />
-        <View style={styles.typeContainer}>
-          <TouchableOpacity
-            style={[styles.typeButton, selectedType === 'short' && styles.selectedType]}
-            onPress={() => setSelectedType('short')}
+  const renderGoalForm = (isEditing = false) => (
+    <View style={styles.inputContainer}>
+      <TextInput
+        style={styles.input}
+        value={newGoalText}
+        onChangeText={setNewGoalText}
+        placeholder="Enter your goal"
+        multiline
+      />
+
+      <Text style={styles.sectionLabel}>Goal Type</Text>
+      <View style={styles.typeContainer}>
+        <TouchableOpacity
+          style={[
+            styles.typeButton,
+            selectedType === 'short' && styles.selectedType,
+          ]}
+          onPress={() => setSelectedType('short')}
+        >
+          <Text
+            style={[
+              styles.typeText,
+              selectedType === 'short' && styles.selectedTypeText,
+            ]}
           >
-            <Text style={[styles.typeText, selectedType === 'short' && styles.selectedTypeText]}>Short Term</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.typeButton, selectedType === 'medium' && styles.selectedType]}
-            onPress={() => setSelectedType('medium')}
+            Short Term
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.typeButton,
+            selectedType === 'medium' && styles.selectedType,
+          ]}
+          onPress={() => setSelectedType('medium')}
+        >
+          <Text
+            style={[
+              styles.typeText,
+              selectedType === 'medium' && styles.selectedTypeText,
+            ]}
           >
-            <Text style={[styles.typeText, selectedType === 'medium' && styles.selectedTypeText]}>Medium Term</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.typeButton, selectedType === 'long' && styles.selectedType]}
-            onPress={() => setSelectedType('long')}
+            Medium Term
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.typeButton,
+            selectedType === 'long' && styles.selectedType,
+          ]}
+          onPress={() => setSelectedType('long')}
+        >
+          <Text
+            style={[
+              styles.typeText,
+              selectedType === 'long' && styles.selectedTypeText,
+            ]}
           >
-            <Text style={[styles.typeText, selectedType === 'long' && styles.selectedTypeText]}>Long Term</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.priorityContainer}>
-          <TouchableOpacity
-            style={[styles.priorityButton, selectedPriority === 'low' && styles.selectedPriority]}
-            onPress={() => setSelectedPriority('low')}
-          >
-            <Text style={[styles.priorityText, selectedPriority === 'low' && styles.selectedPriorityText]}>Low</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.priorityButton, selectedPriority === 'medium' && styles.selectedPriority]}
-            onPress={() => setSelectedPriority('medium')}
-          >
-            <Text style={[styles.priorityText, selectedPriority === 'medium' && styles.selectedPriorityText]}>Medium</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.priorityButton, selectedPriority === 'high' && styles.selectedPriority]}
-            onPress={() => setSelectedPriority('high')}
-          >
-            <Text style={[styles.priorityText, selectedPriority === 'high' && styles.selectedPriorityText]}>High</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.timeContainer}>
-          <Text style={styles.timeLabel}>Weekly Time Commitment (hours):</Text>
-          <TextInput
-            style={styles.timeInput}
-            value={timeCommitment}
-            onChangeText={setTimeCommitment}
-            keyboardType="numeric"
-            placeholder="5"
-          />
-        </View>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddGoal}>
-          <Text style={styles.addButtonText}>Add Goal</Text>
+            Long Term
+          </Text>
         </TouchableOpacity>
       </View>
+
+      <Text style={styles.sectionLabel}>Priority Level</Text>
+      <View style={styles.priorityContainer}>
+        <TouchableOpacity
+          style={[
+            styles.priorityButton,
+            selectedPriority === 'low' && styles.selectedPriority,
+          ]}
+          onPress={() => setSelectedPriority('low')}
+        >
+          <Text
+            style={[
+              styles.priorityText,
+              selectedPriority === 'low' && styles.selectedPriorityText,
+            ]}
+          >
+            Low
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.priorityButton,
+            selectedPriority === 'medium' && styles.selectedPriority,
+          ]}
+          onPress={() => setSelectedPriority('medium')}
+        >
+          <Text
+            style={[
+              styles.priorityText,
+              selectedPriority === 'medium' && styles.selectedPriorityText,
+            ]}
+          >
+            Medium
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.priorityButton,
+            selectedPriority === 'high' && styles.selectedPriority,
+          ]}
+          onPress={() => setSelectedPriority('high')}
+        >
+          <Text
+            style={[
+              styles.priorityText,
+              selectedPriority === 'high' && styles.selectedPriorityText,
+            ]}
+          >
+            High
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.timeContainer}>
+        <Text style={styles.timeLabel}>Weekly Time Commitment (hours)</Text>
+        <TextInput
+          style={styles.timeInput}
+          value={timeCommitment}
+          onChangeText={setTimeCommitment}
+          keyboardType="numeric"
+        />
+      </View>
+
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={isEditing ? handleSaveEdit : handleAddGoal}
+      >
+        <Text style={styles.addButtonText}>
+          {isEditing ? 'Save Changes' : 'Add Goal'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      {!isEditModalVisible && renderGoalForm()}
 
       <ScrollView style={styles.goalsList}>
         {goals.map((goal) => (
           <View key={goal.id} style={styles.goalItem}>
             <View style={styles.goalHeader}>
               <Text style={styles.goalText}>{goal.text}</Text>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDeleteGoal(goal.id)}
-              >
-                <Text style={styles.deleteButtonText}>×</Text>
-              </TouchableOpacity>
+              <View style={styles.goalActions}>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => handleEditGoal(goal)}
+                >
+                  <Ionicons name="pencil" size={20} color="#007AFF" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteGoal(goal.id)}
+                >
+                  <Ionicons name="trash" size={20} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={styles.goalDetails}>
-              <Text style={styles.goalType}>Type: {goal.type}</Text>
-              <Text style={styles.goalPriority}>Priority: {goal.priority}</Text>
-              <Text style={styles.goalTime}>Weekly Time: {goal.timeCommitment} hours</Text>
+              <View style={styles.goalDetail}>
+                <Ionicons name="time-outline" size={16} color="#666" />
+                <Text style={styles.goalType}>Type: {goal.type}</Text>
+              </View>
+              <View style={styles.goalDetail}>
+                <Ionicons name="flag-outline" size={16} color="#666" />
+                <Text style={styles.goalPriority}>Priority: {goal.priority}</Text>
+              </View>
+              <View style={styles.goalDetail}>
+                <Ionicons name="hourglass-outline" size={16} color="#666" />
+                <Text style={styles.goalTime}>Weekly Time: {goal.timeCommitment} hours</Text>
+              </View>
             </View>
             <TouchableOpacity
               style={styles.generateButton}
               onPress={() => handleGenerateTasks(goal)}
             >
+              <Ionicons name="calendar-outline" size={20} color="#fff" />
               <Text style={styles.generateButtonText}>Generate Tasks</Text>
             </TouchableOpacity>
           </View>
         ))}
       </ScrollView>
+
+      <Modal
+        visible={isEditModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Goal</Text>
+            {renderGoalForm(true)}
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton]}
+              onPress={() => {
+                setIsEditModalVisible(false);
+                setEditingGoal(null);
+                setNewGoalText('');
+                setTimeCommitment('5');
+              }}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -179,6 +352,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  headerButton: {
+    marginRight: 16,
+    padding: 8,
   },
   inputContainer: {
     padding: 16,
@@ -193,6 +370,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 16,
     minHeight: 80,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
   },
   typeContainer: {
     flexDirection: 'row',
@@ -288,40 +471,85 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
+    marginRight: 8,
+  },
+  goalActions: {
+    flexDirection: 'row',
+  },
+  editButton: {
+    padding: 4,
+    marginRight: 8,
   },
   deleteButton: {
     padding: 4,
   },
-  deleteButtonText: {
-    fontSize: 24,
-    color: '#FF3B30',
-  },
   goalDetails: {
     marginBottom: 12,
+  },
+  goalDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   goalType: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 4,
+    marginLeft: 4,
   },
   goalPriority: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 4,
+    marginLeft: 4,
   },
   goalTime: {
     fontSize: 14,
     color: '#666',
+    marginLeft: 4,
   },
   generateButton: {
-    backgroundColor: '#34C759',
-    padding: 8,
+    backgroundColor: '#007AFF',
+    padding: 12,
     borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   generateButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButton: {
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  cancelButton: {
+    backgroundColor: '#FF3B30',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 }); 

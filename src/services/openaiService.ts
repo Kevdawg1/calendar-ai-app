@@ -44,9 +44,21 @@ export const openaiService = {
         throw new Error('Failed to parse components response');
       }
 
+      let taskPeriodIncrement = 0;
+      if (goals[0].type === 'short') {
+        taskPeriodIncrement = 1;
+      } else if (goals[0].type === 'medium') {
+        taskPeriodIncrement = 3;
+      } else if (goals[0].type === 'long') {
+        taskPeriodIncrement = 12;
+      }
+      let taskPeriodStart = new Date();
+      let taskPeriodEnd = new Date();
+      taskPeriodEnd.setMonth(taskPeriodStart.getMonth() + taskPeriodIncrement);
+
       // Step 2: Generate subtasks for each component
       const subtasksPrompt = `
-      For each key component, generate specific subtasks that align with the goal type (${goals[0].type}).
+      For each key component, generate specific subtasks over the ${taskPeriodIncrement} month period.
       Consider the weekly time commitment of ${goals[0].timeCommitment} hours.
 
       Components:
@@ -57,6 +69,7 @@ export const openaiService = {
       - description: string (reasoning for why this task is important)
       - estimatedDuration: number (in minutes)
       - priority: string (high/medium/low)
+      - timeframe: string (specific date range based on the goal type's increment)
 
       Return a JSON array of subtasks grouped by component.
       `;
@@ -72,7 +85,9 @@ export const openaiService = {
         
         // Handle the object structure where each component is a key with an array of subtasks
         if (typeof parsedResponse === 'object' && !Array.isArray(parsedResponse)) {
-          subtasksByComponent = Object.entries(parsedResponse).flatMap(([component, subtasks]) => 
+          // Check if the response has a 'tasks' property
+          const tasksObject = parsedResponse.tasks || parsedResponse;
+          subtasksByComponent = Object.entries(tasksObject).flatMap(([component, subtasks]) => 
             (subtasks as any[]).map(subtask => ({
               ...subtask,
               component
@@ -113,6 +128,7 @@ export const openaiService = {
       - Respect the goal's weekly time commitment
       - Group related tasks together
       - Account for task dependencies
+      - Schedule tasks between ${taskPeriodStart.toISOString().split('T')[0]} and ${taskPeriodEnd.toISOString().split('T')[0]}
       ${existingTasks ? 'Consider existing tasks and avoid scheduling conflicts.' : ''}
 
       Return ONLY a JSON array of these task objects.

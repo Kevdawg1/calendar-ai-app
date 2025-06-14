@@ -5,6 +5,7 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation';
 import { taskService } from '../services/taskService';
 import { Task } from '../types';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 type TaskEditScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TaskEdit'>;
@@ -15,20 +16,34 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
   const { taskId } = route.params;
   const [task, setTask] = useState<Task | null>(null);
   const [title, setTitle] = useState('');
-  const [duration, setDuration] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startTime, setStartTime] = useState<Date>(new Date());
+  const [endTime, setEndTime] = useState<Date>(new Date());
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
 
   useEffect(() => {
     const task = taskService.getTask(taskId);
     if (task) {
       setTask(task);
       setTitle(task.title);
-      setDuration(task.duration.toString());
-      setStartTime(task.startTime);
-      setEndTime(task.endTime);
+      const [startHours, startMinutes] = task.startTime.split(':').map(Number);
+      const [endHours, endMinutes] = task.endTime.split(':').map(Number);
+      const newStartTime = new Date();
+      newStartTime.setHours(startHours, startMinutes);
+      const newEndTime = new Date();
+      newEndTime.setHours(endHours, endMinutes);
+      setStartTime(newStartTime);
+      setEndTime(newEndTime);
     }
   }, [taskId]);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
+  };
 
   const handleSave = () => {
     if (!title.trim()) {
@@ -36,22 +51,15 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
       return;
     }
 
-    const durationNum = parseInt(duration);
-    if (isNaN(durationNum) || durationNum <= 0) {
-      Alert.alert('Error', 'Please enter a valid duration');
-      return;
-    }
-
-    if (!startTime || !endTime) {
-      Alert.alert('Error', 'Please enter both start and end times');
+    if (startTime >= endTime) {
+      Alert.alert('Error', 'Start time must be before end time');
       return;
     }
 
     const updatedTask = taskService.updateTask(taskId, {
       title: title.trim(),
-      duration: durationNum,
-      startTime,
-      endTime,
+      startTime: formatTime(startTime),
+      endTime: formatTime(endTime),
     });
 
     if (updatedTask) {
@@ -65,6 +73,20 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
     const updatedTask = taskService.updateTask(taskId, { status });
     if (updatedTask) {
       setTask(updatedTask);
+    }
+  };
+
+  const handleStartTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    setShowStartPicker(false);
+    if (selectedTime) {
+      setStartTime(selectedTime);
+    }
+  };
+
+  const handleEndTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    setShowEndPicker(false);
+    if (selectedTime) {
+      setEndTime(selectedTime);
     }
   };
 
@@ -87,30 +109,39 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
           placeholder="Enter task title"
         />
 
-        <Text style={styles.label}>Duration (minutes)</Text>
-        <TextInput
-          style={styles.input}
-          value={duration}
-          onChangeText={setDuration}
-          keyboardType="numeric"
-          placeholder="Enter duration in minutes"
-        />
+        <Text style={styles.label}>Start Time</Text>
+        <TouchableOpacity
+          style={styles.timeButton}
+          onPress={() => setShowStartPicker(true)}
+        >
+          <Text style={styles.timeButtonText}>{formatTime(startTime)}</Text>
+        </TouchableOpacity>
+        {showStartPicker && (
+          <DateTimePicker
+            value={startTime}
+            mode="time"
+            is24Hour={true}
+            display="spinner"
+            onChange={handleStartTimeChange}
+          />
+        )}
 
-        <Text style={styles.label}>Start Time (HH:MM)</Text>
-        <TextInput
-          style={styles.input}
-          value={startTime}
-          onChangeText={setStartTime}
-          placeholder="Enter start time (e.g., 09:00)"
-        />
-
-        <Text style={styles.label}>End Time (HH:MM)</Text>
-        <TextInput
-          style={styles.input}
-          value={endTime}
-          onChangeText={setEndTime}
-          placeholder="Enter end time (e.g., 10:00)"
-        />
+        <Text style={styles.label}>End Time</Text>
+        <TouchableOpacity
+          style={styles.timeButton}
+          onPress={() => setShowEndPicker(true)}
+        >
+          <Text style={styles.timeButtonText}>{formatTime(endTime)}</Text>
+        </TouchableOpacity>
+        {showEndPicker && (
+          <DateTimePicker
+            value={endTime}
+            mode="time"
+            is24Hour={true}
+            display="spinner"
+            onChange={handleEndTimeChange}
+          />
+        )}
 
         <View style={styles.statusContainer}>
           <Text style={styles.label}>Status</Text>
@@ -195,6 +226,17 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
     fontSize: 16,
+  },
+  timeButton: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  timeButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
   },
   statusContainer: {
     marginBottom: 16,

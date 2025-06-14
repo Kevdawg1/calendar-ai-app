@@ -9,9 +9,13 @@ export const goalService = {
     return [...goals];
   },
 
-  addGoal: (goal: Omit<Goal, 'id' | 'createdAt'>): Goal => {
+  getGoal: (goalId: string): Goal | undefined => {
+    return goals.find(goal => goal.id === goalId);
+  },
+
+  addGoal: (goalData: Omit<Goal, 'id' | 'createdAt'>): Goal => {
     const newGoal: Goal = {
-      ...goal,
+      ...goalData,
       id: generateUUID(),
       createdAt: new Date().toISOString()
     };
@@ -19,11 +23,9 @@ export const goalService = {
     return newGoal;
   },
 
-  updateGoal: (goalId: string, updates: Partial<Omit<Goal, 'id' | 'createdAt'>>): Goal => {
+  updateGoal: (goalId: string, updates: Partial<Omit<Goal, 'id' | 'createdAt'>>): Goal | undefined => {
     const goalIndex = goals.findIndex(goal => goal.id === goalId);
-    if (goalIndex === -1) {
-      throw new Error('Goal not found');
-    }
+    if (goalIndex === -1) return undefined;
 
     const updatedGoal = {
       ...goals[goalIndex],
@@ -35,11 +37,6 @@ export const goalService = {
   },
 
   deleteGoal: (goalId: string): void => {
-    const goalIndex = goals.findIndex(goal => goal.id === goalId);
-    if (goalIndex === -1) {
-      throw new Error('Goal not found');
-    }
-
-    goals.splice(goalIndex, 1);
+    goals = goals.filter(goal => goal.id !== goalId);
   }
 }; 
