@@ -26,8 +26,8 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
   useEffect(() => {
-    const loadTask = () => {
-      const task = taskService.getTask(taskId);
+    const loadTask = async () => {
+      const task = await taskService.getTask(taskId);
       if (task) {
         setTask(task);
         setTitle(task.title);

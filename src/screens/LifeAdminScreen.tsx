@@ -85,7 +85,12 @@ export const LifeAdminScreen = () => {
       );
 
       const scheduledTasks = await lifeAdminService.scheduleTasks(selectedTasksList);
-      await taskService.addTasks(scheduledTasks);
+      // Add goalId to each task
+      const tasksWithGoalId = scheduledTasks.map(task => ({
+        ...task,
+        goalId: 'life-admin' // Use a special goalId for life admin tasks
+      }));
+      await taskService.addTasks(tasksWithGoalId);
 
       Alert.alert(
         'Success',
@@ -94,7 +99,7 @@ export const LifeAdminScreen = () => {
           {
             text: 'View Calendar',
             onPress: () => {
-              navigation.navigate('Calendar', { tasks: scheduledTasks });
+              navigation.navigate('Calendar', { tasks: tasksWithGoalId });
             }
           }
         ]

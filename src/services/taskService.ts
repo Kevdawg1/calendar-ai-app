@@ -6,6 +6,7 @@ const TASKS_STORAGE_KEY = '@calendar_ai_tasks';
 
 // Initialize tasks from storage
 let tasks: Task[] = [];
+let isInitialized = false;
 
 // Load tasks from storage on service initialization
 const loadTasks = async () => {
@@ -14,8 +15,10 @@ const loadTasks = async () => {
     if (storedTasks) {
       tasks = JSON.parse(storedTasks);
     }
+    isInitialized = true;
   } catch (error) {
     console.error('Error loading tasks from storage:', error);
+    isInitialized = true; // Still mark as initialized even if there's an error
   }
 };
 
@@ -32,19 +35,31 @@ const saveTasks = async () => {
 loadTasks();
 
 export const taskService = {
-  getAllTasks: (): Task[] => {
+  getAllTasks: async (): Promise<Task[]> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
     return [...tasks];
   },
 
-  getTask: (taskId: string): Task | undefined => {
+  getTask: async (taskId: string): Promise<Task | undefined> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
     return tasks.find(task => task.id === taskId);
   },
 
-  getTasksByGoalId: (goalId: string): Task[] => {
+  getTasksByGoalId: async (goalId: string): Promise<Task[]> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
     return tasks.filter(task => task.goalId === goalId);
   },
 
   updateTask: async (taskId: string, updates: TaskUpdate): Promise<Task | undefined> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
     const taskIndex = tasks.findIndex(task => task.id === taskId);
     if (taskIndex === -1) return undefined;
 
@@ -60,11 +75,25 @@ export const taskService = {
   },
 
   deleteTask: async (taskId: string): Promise<void> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
     tasks = tasks.filter(task => task.id !== taskId);
     await saveTasks();
   },
 
   addTasks: async (newTasks: Task[]): Promise<Task[]> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
+    // Only add tasks that do not already exist (by title, startDate, and startTime)
+    const uniqueNewTasks = newTasks.filter(newTask =>
+      !tasks.some(existingTask =>
+        existingTask.title === newTask.title &&
+        existingTask.startDate === newTask.startDate &&
+        existingTask.startTime === newTask.startTime
+      )
+    );
     const tasksWithIds = newTasks.map(task => ({
       ...task,
       id: generateUUID(),

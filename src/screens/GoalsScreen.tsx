@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Modal, Button, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, FlatList } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { goalService } from '../services/goalService';
@@ -22,8 +22,6 @@ export const GoalsScreen = () => {
   const [selectedType, setSelectedType] = useState<'short' | 'medium' | 'long'>('short');
   const [selectedPriority, setSelectedPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [timeCommitment, setTimeCommitment] = useState('5');
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
   useEffect(() => {
     const loadGoals = () => {
@@ -35,7 +33,6 @@ export const GoalsScreen = () => {
   }, []);
 
   useEffect(() => {
-    // Add Calendar button to navigation header
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
@@ -72,45 +69,6 @@ export const GoalsScreen = () => {
     setTimeCommitment('5');
   };
 
-  const handleEditGoal = (goal: Goal) => {
-    setEditingGoal(goal);
-    setNewGoalText(goal.text);
-    setSelectedType(goal.type);
-    setSelectedPriority(goal.priority);
-    setTimeCommitment(goal.timeCommitment.toString());
-    setIsEditModalVisible(true);
-  };
-
-  const handleSaveEdit = () => {
-    if (!editingGoal) return;
-
-    if (!newGoalText.trim()) {
-      Alert.alert('Error', 'Please enter a goal');
-      return;
-    }
-
-    const hours = parseInt(timeCommitment);
-    if (isNaN(hours) || hours <= 0) {
-      Alert.alert('Error', 'Please enter a valid time commitment');
-      return;
-    }
-
-    const updatedGoal = goalService.updateGoal(editingGoal.id, {
-      text: newGoalText.trim(),
-      type: selectedType,
-      priority: selectedPriority,
-      timeCommitment: hours
-    });
-
-    if (updatedGoal) {
-      setGoals(goals.map(goal => goal.id === editingGoal.id ? updatedGoal : goal));
-      setIsEditModalVisible(false);
-      setEditingGoal(null);
-      setNewGoalText('');
-      setTimeCommitment('5');
-    }
-  };
-
   const handleDeleteGoal = (goalId: string) => {
     Alert.alert(
       'Delete Goal',
@@ -137,9 +95,17 @@ export const GoalsScreen = () => {
       const tasks = await openaiService.generateTasks([goal]);
       if (tasks && tasks.length > 0) {
         const calendarTasks = tasks.map(task => ({
+          id: task.id,
           title: task.title,
-          frequency: 'weekly' as const,
-          category: 'personal' as const
+          description: task.description || '',
+          duration: task.duration,
+          startDate: task.startDate,
+          startTime: task.startTime,
+          endTime: task.endTime,
+          goalId: goal.id,
+          status: 'pending' as const,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt
         }));
         navigation.navigate('Calendar', { tasks: calendarTasks });
       }
@@ -149,7 +115,7 @@ export const GoalsScreen = () => {
     }
   };
 
-  const renderGoalForm = (isEditing = false) => (
+  const renderGoalForm = () => (
     <View style={styles.inputContainer}>
       <TextInput
         style={styles.input}
@@ -275,11 +241,9 @@ export const GoalsScreen = () => {
 
       <TouchableOpacity
         style={styles.addButton}
-        onPress={isEditing ? handleSaveEdit : handleAddGoal}
+        onPress={handleAddGoal}
       >
-        <Text style={styles.addButtonText}>
-          {isEditing ? 'Save Changes' : 'Add Goal'}
-        </Text>
+        <Text style={styles.addButtonText}>Add Goal</Text>
       </TouchableOpacity>
     </View>
   );
@@ -289,12 +253,6 @@ export const GoalsScreen = () => {
       <View style={styles.goalHeader}>
         <Text style={styles.goalTitle}>{item.text}</Text>
         <View style={styles.goalActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleEditGoal(item)}
-          >
-            <Ionicons name="pencil" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleDeleteGoal(item.id)}
@@ -321,11 +279,6 @@ export const GoalsScreen = () => {
   return (
     <View style={styles.container}>
       <Section title="">
-        <CustomButton
-          title="Add New Goal"
-          onPress={() => setIsEditModalVisible(true)}
-          variant="primary"
-        />
         {goals.length === 0 ? (
           <EmptyState
             icon="flag"
@@ -342,35 +295,10 @@ export const GoalsScreen = () => {
         )}
       </Section>
 
-      {!isEditModalVisible && renderGoalForm()}
-
-      <Modal
-        visible={isEditModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsEditModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Goal</Text>
-            {renderGoalForm(true)}
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={() => {
-                setIsEditModalVisible(false);
-                setEditingGoal(null);
-                setNewGoalText('');
-                setTimeCommitment('5');
-              }}
-            >
-              <Text style={styles.modalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {renderGoalForm()}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -383,7 +311,11 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
   addButton: {
-    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+    marginTop: theme.spacing.md,
   },
   navButton: {
     marginBottom: theme.spacing.md,
@@ -397,57 +329,17 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
   input: {
     fontSize: theme.typography.sizes.md,
     color: theme.colors.text.primary,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.overlay,
-  },
-  modalContent: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    width: '90%',
-    maxWidth: 500,
-  },
-  modalTitle: {
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
-  },
-  formField: {
-    marginBottom: theme.spacing.md,
-  },
-  label: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xs,
-  },
-  selectContainer: {
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.sm,
-  },
-  selectText: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.primary,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: theme.spacing.lg,
-  },
-  cancelButton: {
-    marginRight: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   goalItem: {
     backgroundColor: theme.colors.background,
@@ -492,7 +384,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
   },
   generateButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     flexDirection: 'row',
@@ -504,17 +396,6 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.bold,
     marginLeft: theme.spacing.md,
-  },
-  modalButton: {
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginTop: theme.spacing.lg,
-  },
-  modalButtonText: {
-    color: '#fff',
-    fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.bold,
-    textAlign: 'center',
   },
   sectionLabel: {
     fontSize: theme.typography.sizes.sm,
@@ -530,16 +411,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: theme.colors.primary,
     marginHorizontal: theme.spacing.xs,
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
   },
   selectedType: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
   },
   typeText: {
-    color: '#007AFF',
+    color: theme.colors.primary,
   },
   selectedTypeText: {
     color: '#fff',
@@ -552,16 +433,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: theme.colors.primary,
     marginHorizontal: theme.spacing.xs,
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
   },
   selectedPriority: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
   },
   priorityText: {
-    color: '#007AFF',
+    color: theme.colors.primary,
   },
   selectedPriorityText: {
     color: '#fff',
