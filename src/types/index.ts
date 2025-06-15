@@ -5,6 +5,7 @@ export interface Goal {
   priority: 'low' | 'medium' | 'high';
   timeCommitment: number;
   createdAt: string;
+  color: string;
 }
 
 export interface Task {

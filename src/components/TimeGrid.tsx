@@ -9,6 +9,7 @@ interface TimeGridProps {
   onTaskDelete: (taskId: string) => void;
   onStatusChange: (taskId: string, status: Task['status']) => void;
   getGoalText: (goalId: string) => string;
+  getGoalColor: (goalId: string) => string;
 }
 
 const HOUR_HEIGHT = 60;
@@ -19,6 +20,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
   onTaskDelete,
   onStatusChange,
   getGoalText,
+  getGoalColor,
 }) => {
   const getEarliestHour = (tasks: Task[]) => {
     if (tasks.length === 0) return 8;
@@ -67,6 +69,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                   onDelete={onTaskDelete}
                   onStatusChange={onStatusChange}
                   getGoalText={getGoalText}
+                  getGoalColor={getGoalColor}
                 />
               ))}
           </View>
@@ -79,12 +82,18 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
 const styles = StyleSheet.create({
   timeGrid: {
     flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    marginTop: 16,
   },
   hourRow: {
     flexDirection: 'row',
     minHeight: HOUR_HEIGHT,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
   },
   hourLabel: {
     width: 60,
@@ -92,9 +101,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
+    backgroundColor: '#f8f8f8',
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
   },
   hourContent: {
     flex: 1,
     padding: 4,
+    backgroundColor: '#fff',
   },
 }); 

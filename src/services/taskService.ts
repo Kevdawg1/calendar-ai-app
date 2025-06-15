@@ -105,5 +105,18 @@ export const taskService = {
     tasks.push(...tasksWithIds);
     await saveTasks();
     return tasksWithIds;
+  },
+
+  updateTaskColors: async (goalId: string, color: string): Promise<void> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
+    tasks = tasks.map(task => {
+      if (task.goalId === goalId) {
+        return { ...task, color };
+      }
+      return task;
+    });
+    await saveTasks();
   }
 }; 

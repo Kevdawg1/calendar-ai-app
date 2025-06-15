@@ -1,15 +1,17 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Task } from '../types';
 import { theme } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
 
-interface TaskItemProps {
+type TaskItemProps = {
   task: Task;
   onPress: (taskId: string) => void;
   onDelete: (taskId: string) => void;
   onStatusChange: (taskId: string, status: Task['status']) => void;
   getGoalText: (goalId: string) => string;
-}
+  getGoalColor: (goalId: string) => string;
+};
 
 export const TaskItem: React.FC<TaskItemProps> = ({
   task,
@@ -17,74 +19,84 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   onDelete,
   onStatusChange,
   getGoalText,
+  getGoalColor,
 }) => {
+  const goalColor = getGoalColor(task.goalId);
+  const isCompleted = task.status === 'completed';
+
   return (
     <TouchableOpacity
       style={[
-        styles.taskItem,
-        task.status === 'completed' && styles.completedTask,
-        { borderLeftWidth: 6, borderLeftColor: task.goalId === 'life-admin' ? theme.colors.primary : theme.colors.warning }
+        styles.container,
+        { borderLeftColor: goalColor, borderLeftWidth: 4 }
       ]}
       onPress={() => onPress(task.id)}
     >
-      <View style={styles.taskHeader}>
-        <Text style={[
-          styles.taskTitle,
-          task.status === 'completed' && styles.completedTaskText
-        ]}>
-          {task.title}
-        </Text>
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => onDelete(task.id)}
-        >
-          <Text style={styles.deleteButtonText}>×</Text>
-        </TouchableOpacity>
-      </View>
-      <Text style={[
-        styles.taskDescription,
-        task.status === 'completed' && styles.completedTaskText
-      ]}>
-        {task.description}
-      </Text>
-      <Text style={[
-        styles.taskTime,
-        task.status === 'completed' && styles.completedTaskText
-      ]}>
-        {task.startTime} - {task.endTime}
-      </Text>
-      <View style={styles.taskFooter}>
-        <Text style={[
-          styles.taskGoal,
-          task.status === 'completed' && styles.completedTaskText
-        ]}>
-          {getGoalText(task.goalId)}
-        </Text>
-        <View style={styles.statusContainer}>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{task.title}</Text>
           <TouchableOpacity
-            style={[
-              styles.statusButton,
-              task.status === 'pending' && styles.statusButtonActive
-            ]}
-            onPress={() => onStatusChange(task.id, 'pending')}
+            style={styles.deleteButton}
+            onPress={() => onDelete(task.id)}
           >
-            <Text style={[
-              styles.statusButtonText,
-              task.status === 'pending' && styles.statusButtonTextActive
-            ]}>Pending</Text>
+            <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.statusButton,
-              task.status === 'completed' && styles.statusButtonActive
-            ]}
-            onPress={() => onStatusChange(task.id, 'completed')}
-          >
-            <Text style={[
-              styles.statusButtonText,
-              task.status === 'completed' && styles.statusButtonTextActive
-            ]}>Completed</Text>
-          </TouchableOpacity>
+        </View>
+
+        {task.description && (
+          <Text style={styles.description}>{task.description}</Text>
+        )}
+
+        <View style={styles.timeContainer}>
+          <Text style={styles.time}>
+            {task.startTime} - {task.endTime}
+          </Text>
+        </View>
+
+        <View style={styles.taskFooter}>
+          <View style={styles.taskInfo}>
+            <Text style={[styles.goalText, { color: goalColor }]}>
+              {getGoalText(task.goalId)}
+            </Text>
+            <View style={styles.statusContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.statusButton,
+                  task.status === 'pending' && styles.activeStatus,
+                  { borderColor: goalColor }
+                ]}
+                onPress={() => onStatusChange(task.id, 'pending')}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    task.status === 'pending' && styles.activeStatusText,
+                    { color: task.status === 'pending' ? '#fff' : goalColor }
+                  ]}
+                >
+                  Pending
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.statusButton,
+                  task.status === 'completed' && styles.activeStatus,
+                  { borderColor: goalColor }
+                ]}
+                onPress={() => onStatusChange(task.id, 'completed')}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    task.status === 'completed' && styles.activeStatusText,
+                    { color: task.status === 'completed' ? '#fff' : goalColor }
+                  ]}
+                >
+                  Completed
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -92,77 +104,72 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 };
 
 const styles = StyleSheet.create({
-  taskItem: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+  container: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.sm,
+    ...theme.shadows.sm,
   },
-  taskHeader: {
+  content: {
+    padding: theme.spacing.md,
+  },
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: theme.spacing.sm,
   },
-  taskTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  title: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
     flex: 1,
   },
-  taskDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+  description: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.sm,
   },
-  taskTime: {
-    fontSize: 14,
-    color: '#007AFF',
-    marginBottom: 4,
+  timeContainer: {
+    marginBottom: theme.spacing.sm,
   },
-  deleteButton: {
-    padding: 4,
+  time: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
   },
-  deleteButtonText: {
-    fontSize: 24,
-    color: '#FF3B30',
+  taskFooter: {
+    marginTop: 8,
   },
-  taskGoal: {
-    fontSize: 12,
-    color: '#666',
+  taskInfo: {
+    flexDirection: 'column',
+    gap: 8,
+  },
+  goalText: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.medium,
   },
   statusContainer: {
     flexDirection: 'row',
     gap: 8,
   },
   statusButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    backgroundColor: '#e0e0e0',
+    flex: 1,
+    padding: theme.spacing.sm,
+    borderWidth: 1,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
   },
-  statusButtonActive: {
-    backgroundColor: '#007AFF',
+  activeStatus: {
+    backgroundColor: theme.colors.primary,
   },
-  statusButtonText: {
-    fontSize: 12,
-    color: '#666',
+  statusText: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.medium,
   },
-  statusButtonTextActive: {
+  activeStatusText: {
     color: '#fff',
   },
-  completedTask: {
-    backgroundColor: '#f0f0f0',
-    borderColor: '#d0d0d0',
-  },
-  completedTaskText: {
-    textDecorationLine: 'line-through',
-    color: '#999',
-  },
-  taskFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  deleteButton: {
+    padding: theme.spacing.xs,
   },
 }); 
