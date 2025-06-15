@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -10,9 +10,10 @@ import { Calendar } from 'react-native-calendars';
 import { format, parseISO } from 'date-fns';
 import { generateUUID } from '../utils/uuid';
 import { theme } from '../theme';
-import { commonStyles } from '../theme/styles';
+import { sharedStyles } from '../theme/styles';
 import { TimeGrid } from '../components/TimeGrid';
 import { AddTaskModal } from '../components/AddTaskModal';
+import { Ionicons } from '@expo/vector-icons';
 
 type CalendarScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Calendar'>;
@@ -46,7 +47,7 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
       if (route.params?.tasks) {
         try {
           console.log('Received tasks from route params:', route.params.tasks);
-          const newTasks = await taskService.addTasks(route.params.tasks);
+          const newTasks = await taskService.addTasks(route.params.tasks as Task[]);
           console.log('Added tasks to service:', newTasks);
           setTasks(prevTasks => {
             const existingTaskIds = new Set(newTasks.map(task => task.id));
@@ -248,16 +249,11 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     return marked;
   };
 
-  const validTasks: Task[] = tasks.filter(
-    (t: any) => t && t.startDate && t.goalId && t.status && t.createdAt && t.updatedAt
-  );
-
   return (
-    <View style={commonStyles.container}>
+    <View style={sharedStyles.container}>
       <Calendar
         onDayPress={(day: { dateString: string }) => setSelectedDate(day.dateString)}
-        markedDates={getMarkedDates(validTasks)}
-        markingType="multi-dot"
+        markedDates={getMarkedDates(tasks)}
         theme={{
           todayTextColor: theme.colors.primary,
           selectedDayBackgroundColor: theme.colors.primary,
@@ -265,28 +261,35 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
           arrowColor: theme.colors.primary,
         }}
       />
-      <View style={commonStyles.content}>
-        <Text style={commonStyles.title}>
-          {format(parseISO(selectedDate), 'MMMM d, yyyy')}
-        </Text>
-        <ScrollView style={commonStyles.content}>
-          <TimeGrid
-            tasks={getTasksForDate(selectedDate)}
-            onTaskPress={handleTaskPress}
-            onTaskDelete={handleDeleteTask}
-            onStatusChange={handleStatusChange}
-            getGoalText={getGoalText}
-          />
-          {getTasksForDate(selectedDate).length === 0 && (
-            <Text style={commonStyles.textSecondary}>No tasks scheduled for this day</Text>
-          )}
-        </ScrollView>
-      </View>
+
+      <ScrollView style={sharedStyles.content} contentContainerStyle={{ flexGrow: 1 }}>
+        <View style={sharedStyles.header}>
+          <Text style={sharedStyles.header}>
+            {format(parseISO(selectedDate), 'EEEE, MMMM d, yyyy')}
+          </Text>
+          <TouchableOpacity
+            style={sharedStyles.button}
+            onPress={() => setIsAddTaskModalVisible(true)}
+          >
+            <Text style={sharedStyles.buttonText}>Add Task</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TimeGrid
+          tasks={getTasksForDate(selectedDate)}
+          onTaskPress={handleTaskPress}
+          onTaskDelete={handleDeleteTask}
+          onStatusChange={handleStatusChange}
+          getGoalText={getGoalText}
+        />
+      </ScrollView>
+
       <TouchableOpacity
-        style={[commonStyles.card, { position: 'absolute', right: 20, bottom: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: theme.colors.primary, justifyContent: 'center', alignItems: 'center', ...theme.shadows.md }]}
+        style={sharedStyles.fab}
         onPress={() => setIsAddTaskModalVisible(true)}
+        accessibilityLabel="Add Task"
       >
-        <Text style={{ fontSize: 30, color: theme.colors.text.inverse, fontWeight: 'bold' }}>+</Text>
+        <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
 
       <AddTaskModal
@@ -294,241 +297,8 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         onClose={() => setIsAddTaskModalVisible(false)}
         onSave={handleAddTask}
         goals={goals}
+        selectedDate={selectedDate}
       />
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  tasksContainer: {
-    flex: 1,
-    padding: 16,
-  },
-  dateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  taskList: {
-    flex: 1,
-  },
-  taskItem: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  taskTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  taskDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  taskTime: {
-    fontSize: 14,
-    color: '#007AFF',
-    marginBottom: 4,
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  deleteButtonText: {
-    fontSize: 24,
-    color: '#FF3B30',
-  },
-  taskDuration: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  taskGoal: {
-    fontSize: 12,
-    color: '#666',
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#666',
-    fontStyle: 'italic',
-    marginTop: 20,
-  },
-  addButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  addButtonText: {
-    fontSize: 30,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  goalSelector: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  goalList: {
-    maxHeight: 150,
-  },
-  goalOption: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  selectedGoal: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  goalOptionText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#FF3B30',
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-  },
-  modalButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  statusButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    backgroundColor: '#e0e0e0',
-  },
-  statusButtonActive: {
-    backgroundColor: '#007AFF',
-  },
-  statusButtonText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  statusButtonTextActive: {
-    color: '#fff',
-  },
-  timeGrid: {
-    flex: 1,
-  },
-  hourRow: {
-    flexDirection: 'row',
-    minHeight: HOUR_HEIGHT,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  hourLabel: {
-    width: 60,
-    padding: 8,
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  hourContent: {
-    flex: 1,
-    padding: 4,
-  },
-  completedTask: {
-    backgroundColor: '#f0f0f0',
-    borderColor: '#d0d0d0',
-  },
-  completedTaskText: {
-    textDecorationLine: 'line-through',
-    color: '#999',
-  },
-  taskFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-}); 
+} 

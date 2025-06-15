@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -12,7 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../theme';
-import { commonStyles } from '../theme/styles';
+import { sharedStyles } from '../theme/styles';
 import { Button } from '../components/Button';
 import { Section } from '../components/Section';
 import { lifeAdminTasks, LifeAdminTask } from '../data/lifeAdminTasks';
@@ -41,7 +40,7 @@ export const LifeAdminScreen = () => {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
-          style={styles.headerButton}
+          style={sharedStyles.headerButton}
           onPress={() => navigation.navigate('Calendar', {})}
         >
           <Ionicons name="calendar" size={24} color="#fff" />
@@ -161,26 +160,26 @@ export const LifeAdminScreen = () => {
   };
 
   return (
-    <View style={commonStyles.container}>
-      <View style={commonStyles.header}>
+    <View style={sharedStyles.container}>
+      <View style={sharedStyles.header}>
         <Button
           title="Schedule Life Admin Tasks"
           onPress={handleScheduleTasks}
-          style={styles.scheduleButton}
+          style={sharedStyles.button}
           disabled={isLoading}
         />
       </View>
 
       {isLoading && (
-        <View style={styles.loadingOverlay}>
+        <View style={sharedStyles.loadingOverlay}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>{loadingStage}</Text>
+          <Text style={sharedStyles.loadingText}>{loadingStage}</Text>
         </View>
       )}
 
-      <ScrollView style={commonStyles.content}>
+      <ScrollView style={sharedStyles.content}>
         <Section title="">
-          <Text style={commonStyles.description}>
+          <Text style={sharedStyles.emptyStateText}>
             Manage your recurring life admin tasks. Select the tasks you want to schedule in your calendar.
           </Text>
 
@@ -225,30 +224,4 @@ export const LifeAdminScreen = () => {
       />
     </View>
   );
-};
-
-const styles = StyleSheet.create({
-  headerButton: {
-    marginRight: theme.spacing.md,
-    padding: theme.spacing.sm,
-  },
-  scheduleButton: {
-    width: '100%',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.primary,
-  },
-}); 
+}; 

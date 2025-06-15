@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, FlatList, ActivityIndicator } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { goalService } from '../services/goalService';
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { theme } from '../theme';
+import { sharedStyles } from '../theme/styles';
 import { Section } from '../components/Section';
 import { EmptyState } from '../components/EmptyState';
 import { Button as CustomButton } from '../components/Button';
@@ -22,7 +23,7 @@ export const GoalsScreen = () => {
   const [newGoalText, setNewGoalText] = useState('');
   const [selectedType, setSelectedType] = useState<'short' | 'medium' | 'long'>('short');
   const [selectedPriority, setSelectedPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [timeCommitment, setTimeCommitment] = useState('5');
+  const [timeCommitment, setTimeCommitment] = useState('20');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState<string>('');
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
@@ -36,7 +37,7 @@ export const GoalsScreen = () => {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
-          style={styles.headerButton}
+          style={sharedStyles.headerButton}
           onPress={() => navigation.navigate('Calendar', {})}
         >
           <Ionicons name="calendar" size={24} color="#fff" />
@@ -137,380 +138,159 @@ export const GoalsScreen = () => {
   };
 
   const renderGoalForm = () => (
-    <View style={styles.inputContainer}>
+    <View style={sharedStyles.inputContainer}>
       <TextInput
-        style={styles.input}
+        style={sharedStyles.input}
         value={newGoalText}
         onChangeText={setNewGoalText}
         placeholder="Enter your goal"
         multiline
       />
 
-      <Text style={styles.sectionLabel}>Goal Type</Text>
-      <View style={styles.typeContainer}>
-        <TouchableOpacity
-          style={[
-            styles.typeButton,
-            selectedType === 'short' && styles.selectedType,
-          ]}
-          onPress={() => setSelectedType('short')}
-        >
-          <Text
+      <Text style={sharedStyles.sectionLabel}>Goal Type</Text>
+      <View style={sharedStyles.formSectionWide}>
+        <View style={sharedStyles.typeContainerRow}>
+          <TouchableOpacity
             style={[
-              styles.typeText,
-              selectedType === 'short' && styles.selectedTypeText,
+              sharedStyles.typeButton,
+              selectedType === 'short' && sharedStyles.selectedType,
             ]}
+            onPress={() => setSelectedType('short')}
           >
-            Short Term
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.typeButton,
-            selectedType === 'medium' && styles.selectedType,
-          ]}
-          onPress={() => setSelectedType('medium')}
-        >
-          <Text
+            <Text style={selectedType === 'short' ? sharedStyles.selectedTypeText : sharedStyles.typeText}>Short Term</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[
-              styles.typeText,
-              selectedType === 'medium' && styles.selectedTypeText,
+              sharedStyles.typeButton,
+              selectedType === 'medium' && sharedStyles.selectedType,
             ]}
+            onPress={() => setSelectedType('medium')}
           >
-            Medium Term
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.typeButton,
-            selectedType === 'long' && styles.selectedType,
-          ]}
-          onPress={() => setSelectedType('long')}
-        >
-          <Text
+            <Text style={selectedType === 'medium' ? sharedStyles.selectedTypeText : sharedStyles.typeText}>Medium Term</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[
-              styles.typeText,
-              selectedType === 'long' && styles.selectedTypeText,
+              sharedStyles.typeButton,
+              selectedType === 'long' && sharedStyles.selectedType,
             ]}
+            onPress={() => setSelectedType('long')}
           >
-            Long Term
-          </Text>
-        </TouchableOpacity>
+            <Text style={selectedType === 'long' ? sharedStyles.selectedTypeText : sharedStyles.typeText}>Long Term</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <Text style={styles.sectionLabel}>Priority Level</Text>
-      <View style={styles.priorityContainer}>
-        <TouchableOpacity
-          style={[
-            styles.priorityButton,
-            selectedPriority === 'low' && styles.selectedPriority,
-          ]}
-          onPress={() => setSelectedPriority('low')}
-        >
-          <Text
+      <Text style={sharedStyles.sectionLabel}>Priority Level</Text>
+      <View style={sharedStyles.formSectionWide}>
+        <View style={sharedStyles.typeContainerRow}>
+          <TouchableOpacity
             style={[
-              styles.priorityText,
-              selectedPriority === 'low' && styles.selectedPriorityText,
+              sharedStyles.priorityButton,
+              selectedPriority === 'low' && sharedStyles.selectedPriority,
             ]}
+            onPress={() => setSelectedPriority('low')}
           >
-            Low
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.priorityButton,
-            selectedPriority === 'medium' && styles.selectedPriority,
-          ]}
-          onPress={() => setSelectedPriority('medium')}
-        >
-          <Text
+            <Text style={selectedPriority === 'low' ? sharedStyles.selectedPriorityText : sharedStyles.priorityText}>Low</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[
-              styles.priorityText,
-              selectedPriority === 'medium' && styles.selectedPriorityText,
+              sharedStyles.priorityButton,
+              selectedPriority === 'medium' && sharedStyles.selectedPriority,
             ]}
+            onPress={() => setSelectedPriority('medium')}
           >
-            Medium
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.priorityButton,
-            selectedPriority === 'high' && styles.selectedPriority,
-          ]}
-          onPress={() => setSelectedPriority('high')}
-        >
-          <Text
+            <Text style={selectedPriority === 'medium' ? sharedStyles.selectedPriorityText : sharedStyles.priorityText}>Medium</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[
-              styles.priorityText,
-              selectedPriority === 'high' && styles.selectedPriorityText,
+              sharedStyles.priorityButton,
+              selectedPriority === 'high' && sharedStyles.selectedPriority,
             ]}
+            onPress={() => setSelectedPriority('high')}
           >
-            High
-          </Text>
-        </TouchableOpacity>
+            <Text style={selectedPriority === 'high' ? sharedStyles.selectedPriorityText : sharedStyles.priorityText}>High</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <View style={styles.timeContainer}>
-        <Text style={styles.timeLabel}>Weekly Time Commitment (hours)</Text>
-        <TextInput
-          style={styles.timeInput}
-          value={timeCommitment}
-          onChangeText={setTimeCommitment}
-          keyboardType="numeric"
-        />
-      </View>
+      <Text style={sharedStyles.sectionLabel}>Time Commitment (hours per week)</Text>
+      <TextInput
+        style={sharedStyles.input}
+        value={timeCommitment}
+        onChangeText={setTimeCommitment}
+        keyboardType="numeric"
+        placeholder="Enter hours per week"
+      />
 
-      <TouchableOpacity
-        style={styles.addButton}
+      <CustomButton
+        title="Add Goal"
         onPress={handleAddGoal}
-      >
-        <Text style={styles.addButtonText}>Add Goal</Text>
-      </TouchableOpacity>
+        style={sharedStyles.button}
+      />
     </View>
   );
 
   const renderGoalItem = ({ item }: { item: Goal }) => (
-    <View style={styles.goalItem}>
-      <View style={styles.goalHeader}>
-        <Text style={styles.goalTitle}>{item.text}</Text>
-        <View style={styles.goalActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleDeleteGoal(item.id)}
-          >
-            <Ionicons name="trash" size={20} color={theme.colors.danger} />
-          </TouchableOpacity>
-        </View>
+    <View style={sharedStyles.card}>
+      <View style={sharedStyles.cardHeader}>
+        <Text style={sharedStyles.cardTitle}>{item.text}</Text>
+        <TouchableOpacity
+          onPress={() => handleDeleteGoal(item.id)}
+          style={sharedStyles.deleteButton}
+        >
+          <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
+        </TouchableOpacity>
       </View>
-      <View style={styles.goalDetails}>
-        <Text style={styles.goalType}>Type: {item.type}</Text>
-        <Text style={styles.goalPriority}>Priority: {item.priority}</Text>
-        <Text style={styles.goalTime}>Weekly Time: {item.timeCommitment} hours</Text>
+
+      <View style={sharedStyles.cardContent}>
+        <Text style={sharedStyles.cardText}>
+          Type: {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+        </Text>
+        <Text style={sharedStyles.cardText}>
+          Priority: {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
+        </Text>
+        <Text style={sharedStyles.cardText}>
+          Time Commitment: {item.timeCommitment} hours/week
+        </Text>
       </View>
-      <TouchableOpacity
-        style={styles.generateButton}
+
+      <CustomButton
+        title="Generate Tasks"
         onPress={() => handleGenerateTasks(item)}
-      >
-        <Ionicons name="calendar-outline" size={20} color="#fff" />
-        <Text style={styles.generateButtonText}>Generate Tasks</Text>
-      </TouchableOpacity>
+        style={sharedStyles.button}
+      />
     </View>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={sharedStyles.container}>
       {isLoading && (
-        <View style={styles.loadingOverlay}>
+        <View style={sharedStyles.loadingOverlay}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>{loadingStage}</Text>
+          <Text style={sharedStyles.loadingText}>{loadingStage}</Text>
         </View>
       )}
-      
-      <Section title="">
-        {goals.length === 0 ? (
-          <EmptyState
-            icon="flag"
-            title="No Goals Yet"
-            message="Add your first goal to get started"
-          />
-        ) : (
-          <FlatList
-            data={goals}
-            renderItem={renderGoalItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.goalsList}
-          />
-        )}
-      </Section>
 
-      {renderGoalForm()}
+      <ScrollView style={sharedStyles.content}>
+        <Section title="Add New Goal">
+          {renderGoalForm()}
+        </Section>
+
+        <Section title="Your Goals">
+          {goals.length === 0 ? (
+            <EmptyState
+              message="No goals yet. Add your first goal above!"
+            />
+          ) : (
+            <FlatList
+              data={goals}
+              renderItem={renderGoalItem}
+              keyExtractor={item => item.id}
+              scrollEnabled={false}
+            />
+          )}
+        </Section>
+      </ScrollView>
     </View>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  description: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.lg,
-  },
-  addButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-    marginTop: theme.spacing.md,
-  },
-  navButton: {
-    marginBottom: theme.spacing.md,
-  },
-  goalsList: {
-    paddingBottom: theme.spacing.xl,
-  },
-  headerButton: {
-    marginRight: theme.spacing.md,
-    padding: theme.spacing.sm,
-  },
-  inputContainer: {
-    padding: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  input: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  goalItem: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    ...theme.shadows.sm,
-  },
-  goalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  goalTitle: {
-    fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    flex: 1,
-  },
-  goalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: theme.spacing.sm,
-  },
-  actionButton: {
-    marginLeft: theme.spacing.md,
-  },
-  goalDetails: {
-    marginBottom: theme.spacing.sm,
-  },
-  goalType: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.secondary,
-  },
-  goalPriority: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.secondary,
-  },
-  goalTime: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.secondary,
-  },
-  generateButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  generateButtonText: {
-    color: '#fff',
-    fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.bold,
-    marginLeft: theme.spacing.md,
-  },
-  sectionLabel: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.bold,
-    marginBottom: theme.spacing.xs,
-    color: theme.colors.text.secondary,
-  },
-  typeContainer: {
-    flexDirection: 'row',
-    marginBottom: theme.spacing.md,
-  },
-  typeButton: {
-    flex: 1,
-    padding: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    marginHorizontal: theme.spacing.xs,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-  },
-  selectedType: {
-    backgroundColor: theme.colors.primary,
-  },
-  typeText: {
-    color: theme.colors.primary,
-  },
-  selectedTypeText: {
-    color: '#fff',
-  },
-  priorityContainer: {
-    flexDirection: 'row',
-    marginBottom: theme.spacing.md,
-  },
-  priorityButton: {
-    flex: 1,
-    padding: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    marginHorizontal: theme.spacing.xs,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-  },
-  selectedPriority: {
-    backgroundColor: theme.colors.primary,
-  },
-  priorityText: {
-    color: theme.colors.primary,
-  },
-  selectedPriorityText: {
-    color: '#fff',
-  },
-  timeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  timeLabel: {
-    flex: 1,
-    fontSize: theme.typography.sizes.sm,
-  },
-  timeInput: {
-    width: 60,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.sm,
-    textAlign: 'center',
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.bold,
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.primary,
-  },
-}); 
+}; 

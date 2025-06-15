@@ -4,10 +4,7 @@ import { Task } from '../types';
 import { generateUUID } from '../utils/uuid';
 import { UserPreferences } from './userPreferencesService';
 import { getPromptWithPreferences, parseOpenAIResponse, validateTaskArray } from '../utils/promptUtils';
-
-const ENDPOINT = 'https://calendar-ai.openai.azure.com/';
-const API_KEY = 'E5iUsb1W3fHZgYHoxYagSAPHqEe9l9hInO1wJYnD2Th4JOhCPaCiJQQJ99BFACL93NaXJ3w3AAAAACOGKXdj';
-const DEPLOYMENT = 'gpt-35-turbo';
+import { openaiConfig } from '../config/openai';
 
 export const lifeAdminService = {
   scheduleTasks: async (tasks: LifeAdminTask[], userPreferences?: UserPreferences): Promise<Task[]> => {
@@ -144,7 +141,7 @@ async function makeOpenAIRequest(prompt: string): Promise<string> {
   console.log('Making OpenAI request with prompt:', prompt);
   
   const response = await axios.post(
-    `${ENDPOINT}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview`,
+    `${openaiConfig.endpoint}/openai/deployments/${openaiConfig.deployment}/chat/completions?api-version=2024-02-15-preview`,
     {
       messages: [
         {
@@ -163,7 +160,7 @@ async function makeOpenAIRequest(prompt: string): Promise<string> {
     {
       headers: {
         'Content-Type': 'application/json',
-        'api-key': API_KEY
+        'api-key': openaiConfig.apiKey
       }
     }
   );

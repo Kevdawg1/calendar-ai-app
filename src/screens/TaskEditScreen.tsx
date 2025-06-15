@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { taskService } from '../services/taskService';
-import { Task } from '../types';
+import { Task, TaskUpdate } from '../types';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { sharedStyles } from '../theme/styles';
 
 type TaskEditScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TaskEdit'>;
@@ -27,34 +28,49 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
 
   useEffect(() => {
     const loadTask = async () => {
-      const task = await taskService.getTask(taskId);
-      if (task) {
-        setTask(task);
-        setTitle(task.title);
-        setDescription(task.description);
-        setDuration(task.duration.toString());
-        
-        // Parse start date
-        const [year, month, day] = (task.startDate || '1970-01-01').split('-').map(Number);
-        const startDate = new Date(year, month - 1, day);
-        setStartDate(startDate);
-
-        // Parse start and end times
-        if ((task.startTime || '') && (task.endTime || '')) {
-          const [startHours, startMinutes] = (task.startTime || '00:00').split(':').map(Number);
-          const [endHours, endMinutes] = (task.endTime || '00:00').split(':').map(Number);
+      try {
+        const task = await taskService.getTask(taskId || '');
+        if (task) {
+          setTask(task);
+          setTitle(task.title || '');
+          setDescription(task.description || '');
+          setDuration(task.duration ? task.duration.toString() : '');
+          setStartDate(task.startDate ? new Date(task.startDate) : new Date());
+          setStartTime(task.startTime ? new Date(`1970-01-01T${task.startTime}`) : new Date());
+          setEndTime(task.endTime ? new Date(`1970-01-01T${task.endTime}`) : new Date());
           
-          const newStartTime = new Date(startDate);
-          newStartTime.setHours(startHours, startMinutes);
-          setStartTime(newStartTime);
+          // Parse start date
+          const [year, month, day] = task.startDate.split('-').map(Number);
+          const startDate = new Date(year, month - 1, day);
+          setStartDate(startDate);
 
-          const newEndTime = new Date(startDate);
-          newEndTime.setHours(endHours, endMinutes);
-          setEndTime(newEndTime);
+          // Parse start and end times
+          if (task.startTime && task.endTime) {
+            const [startHours, startMinutes] = task.startTime.split(':').map(Number);
+            const [endHours, endMinutes] = task.endTime.split(':').map(Number);
+            
+            const newStartTime = new Date(startDate);
+            newStartTime.setHours(startHours, startMinutes);
+            setStartTime(newStartTime);
+
+            const newEndTime = new Date(startDate);
+            newEndTime.setHours(endHours, endMinutes);
+            setEndTime(newEndTime);
+          } else {
+            // Set default times if not provided
+            const defaultStartTime = new Date(startDate);
+            defaultStartTime.setHours(9, 0); // 9:00 AM
+            setStartTime(defaultStartTime);
+
+            const defaultEndTime = new Date(startDate);
+            defaultEndTime.setHours(17, 0); // 5:00 PM
+            setEndTime(defaultEndTime);
+          }
         }
+      } catch (error) {
+        console.error('Error loading task:', error);
       }
     };
-
     loadTask();
   }, [taskId]);
 
@@ -96,7 +112,7 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
     }
 
     try {
-      const updates = {
+      const updates: TaskUpdate = {
         title: title.trim(),
         description: description.trim(),
         duration: durationNum,
@@ -105,7 +121,7 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
         endTime: formatTime(endTime),
       };
 
-      const updatedTask = await taskService.updateTask(taskId, updates);
+      const updatedTask = await taskService.updateTask(taskId || '', updates);
 
       if (updatedTask) {
         navigation.goBack();
@@ -161,23 +177,23 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
 
   if (!task) {
     return (
-      <View style={styles.container}>
+      <View style={sharedStyles.container}>
         <Text>Loading...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={sharedStyles.container}>
       <TextInput
-        style={styles.input}
+        style={sharedStyles.input}
         value={title}
         onChangeText={setTitle}
         placeholder="Task title"
       />
 
       <TextInput
-        style={[styles.input, styles.textArea]}
+        style={[sharedStyles.input, sharedStyles.textArea]}
         value={description}
         onChangeText={setDescription}
         placeholder="Task description"
@@ -186,7 +202,7 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
       />
 
       <TextInput
-        style={styles.input}
+        style={sharedStyles.input}
         value={duration}
         onChangeText={setDuration}
         placeholder="Duration (minutes)"
@@ -194,22 +210,22 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
       />
 
       <TouchableOpacity 
-        style={styles.dateButton}
+        style={sharedStyles.dateButton}
         onPress={() => setShowStartDatePicker(true)}
       >
         <Text>Date: {formatDate(startDate)}</Text>
       </TouchableOpacity>
 
-      <View style={styles.timeContainer}>
+      <View style={sharedStyles.timeContainer}>
         <TouchableOpacity 
-          style={styles.timeButton}
+          style={sharedStyles.timeButton}
           onPress={() => setShowStartTimePicker(true)}
         >
           <Text>Start: {formatTime(startTime)}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={styles.timeButton}
+          style={sharedStyles.timeButton}
           onPress={() => setShowEndTimePicker(true)}
         >
           <Text>End: {formatTime(endTime)}</Text>
@@ -242,100 +258,30 @@ export default function TaskEditScreen({ navigation, route }: TaskEditScreenProp
         />
       )}
 
-      <View style={styles.statusContainer}>
+      <View style={sharedStyles.statusContainer}>
         <TouchableOpacity
-          style={[styles.statusButton, task.status === 'pending' && styles.activeStatus]}
+          style={[sharedStyles.statusButton, task.status === 'pending' && sharedStyles.activeStatus]}
           onPress={() => handleStatusChange('pending')}
         >
           <Text>Pending</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.statusButton, task.status === 'completed' && styles.activeStatus]}
+          style={[sharedStyles.statusButton, task.status === 'completed' && sharedStyles.activeStatus]}
           onPress={() => handleStatusChange('completed')}
         >
           <Text>Completed</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.statusButton, task.status === 'cancelled' && styles.activeStatus]}
+          style={[sharedStyles.statusButton, task.status === 'cancelled' && sharedStyles.activeStatus]}
           onPress={() => handleStatusChange('cancelled')}
         >
           <Text>Cancelled</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Save Changes</Text>
+      <TouchableOpacity style={sharedStyles.button} onPress={handleSave}>
+        <Text style={sharedStyles.buttonText}>Save Changes</Text>
       </TouchableOpacity>
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  dateButton: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  timeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  timeButton: {
-    flex: 1,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginHorizontal: 5,
-    alignItems: 'center',
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  statusButton: {
-    flex: 1,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginHorizontal: 5,
-    alignItems: 'center',
-  },
-  activeStatus: {
-    backgroundColor: '#007AFF',
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-}); 
+} 

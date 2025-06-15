@@ -1,73 +1,515 @@
 import { StyleSheet } from 'react-native';
 import { theme } from './index';
 
-export const commonStyles = StyleSheet.create({
+export const sharedStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    padding: theme.spacing.md,
   },
   header: {
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    fontSize: theme.typography.sizes.xxl,
+    fontWeight: theme.typography.weights.bold,
+    marginBottom: theme.spacing.lg,
+    color: theme.colors.text.primary,
   },
-  content: {
-    flex: 1,
+  subheader: {
+    fontSize: theme.typography.sizes.xl,
+    fontWeight: theme.typography.weights.semibold,
+    marginBottom: theme.spacing.md,
+    color: theme.colors.text.primary,
+  },
+  section: {
+    marginBottom: theme.spacing.xl,
   },
   card: {
     backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.sm,
+    ...theme.shadows.sm,
+  },
+  button: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    alignItems: 'center',
+    marginVertical: theme.spacing.sm,
+  },
+  buttonText: {
+    color: theme.colors.text.inverse,
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+  },
+  secondaryButton: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    alignItems: 'center',
+    marginVertical: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  secondaryButtonText: {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.primary,
+  },
+  label: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.medium,
+    marginBottom: theme.spacing.sm,
+    color: theme.colors.text.primary,
+  },
+  errorText: {
+    color: theme.colors.danger,
+    fontSize: theme.typography.sizes.sm,
+    marginTop: theme.spacing.xs,
+  },
+  successText: {
+    color: theme.colors.success,
+    fontSize: theme.typography.sizes.sm,
+    marginTop: theme.spacing.xs,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+  },
+  emptyStateText: {
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    marginTop: theme.spacing.md,
+  },
+  list: {
+    flex: 1,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  listItemText: {
+    flex: 1,
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.primary,
+  },
+  badge: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.round,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    marginLeft: theme.spacing.sm,
+  },
+  badgeText: {
+    color: theme.colors.text.inverse,
+    fontSize: theme.typography.sizes.xs,
+    fontWeight: theme.typography.weights.semibold,
+  },
+  timeInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  timeInputLabel: {
+    flex: 1,
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.primary,
+  },
+  timeInputValue: {
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.primary,
+    fontWeight: theme.typography.weights.medium,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  checkbox: {
+    marginRight: theme.spacing.sm,
+  },
+  checkboxLabel: {
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.primary,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: theme.typography.sizes.xl,
+    fontWeight: theme.typography.weights.bold,
+    marginBottom: theme.spacing.lg,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    marginHorizontal: theme.spacing.sm,
+  },
+  cancelButton: {
+    backgroundColor: theme.colors.danger,
+  },
+  saveButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  modalButtonText: {
+    color: theme.colors.background,
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.bold,
+    textAlign: 'center',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  goalSelector: {
+    marginBottom: theme.spacing.lg,
+  },
+  goalList: {
+    maxHeight: 150,
+  },
+  goalOption: {
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.sm,
+  },
+  selectedGoal: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  goalOptionText: {
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.primary,
+  },
+  headerButton: {
+    marginRight: theme.spacing.md,
+    padding: theme.spacing.sm,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.primary,
+  },
+  content: {
+    flex: 1,
+  },
+  inputContainer: {
+    padding: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  sectionLabel: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.bold,
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.text.secondary,
+  },
+  typeContainer: {
+    flexDirection: 'row',
+    marginBottom: theme.spacing.md,
+  },
+  typeButton: {
+    width: 110,
+    padding: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    marginHorizontal: theme.spacing.xs,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+  },
+  selectedType: {
+    backgroundColor: theme.colors.primary,
+  },
+  typeText: {
+    color: theme.colors.primary,
+    textAlign: 'center',
+  },
+  selectedTypeText: {
+    color: '#fff',
+    textAlign: 'center',
+  },
+  priorityContainer: {
+    flexDirection: 'row',
+    marginBottom: theme.spacing.md,
+  },
+  priorityButton: {
+    width: 110,
+    padding: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    marginHorizontal: theme.spacing.xs,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+  },
+  selectedPriority: {
+    backgroundColor: theme.colors.primary,
+  },
+  priorityText: {
+    color: theme.colors.primary,
+    textAlign: 'center',
+  },
+  selectedPriorityText: {
+    color: '#fff',
+    textAlign: 'center',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: theme.spacing.sm,
   },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  text: {
+  cardTitle: {
     fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.primary,
-  },
-  textSecondary: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.secondary,
-  },
-  title: {
-    fontSize: theme.typography.sizes.lg,
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.text.primary,
-    marginLeft: theme.spacing.sm,
+    flex: 1,
+  },
+  cardContent: {
+    marginBottom: theme.spacing.sm,
+  },
+  cardText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+  },
+  deleteButton: {
+    marginLeft: theme.spacing.md,
+  },
+  // Survey Screen Styles
+  surveyContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
+  },
+  sectionWithMargin: {
+    marginTop: theme.spacing.xl,
+  },
+  stepContainer: {
+    alignItems: 'center',
+    marginTop: theme.spacing.lg,
+    width: '100%',
   },
   description: {
     fontSize: theme.typography.sizes.md,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+    textAlign: 'center',
   },
-  dropdown: {
+  questionContainer: {
+    marginBottom: theme.spacing.xl,
+    alignItems: 'center',
+    width: '100%',
+  },
+  question: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.md,
+    textAlign: 'center',
+  },
+  pickerRow: {
+    alignItems: 'center',
+    width: '100%',
+    minWidth: 220,
+    marginVertical: theme.spacing.sm,
+  },
+  timePicker: {
+    minWidth: 220,
+    alignSelf: 'center',
+  },
+  buttonContainerFixed: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
     position: 'absolute',
-    top: '100%',
+    left: 0,
     right: 0,
+    bottom: 0,
+    zIndex: 10,
+  },
+  answerButtonGroup: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    width: '100%',
+  },
+  answerButton: {
+    flex: 1,
+    marginHorizontal: theme.spacing.sm,
+  },
+  daysRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    width: '100%',
+    flexWrap: 'wrap',
+  },
+  dayButton: {
+    minWidth: 40,
+    marginHorizontal: 2,
+    marginBottom: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+  },
+  summaryContainer: {
     backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.lg,
+    marginTop: theme.spacing.md,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.md,
+  },
+  summaryLabel: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+  },
+  summaryValue: {
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.text.secondary,
+  },
+  workScheduleSummary: {
+    marginTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: theme.spacing.md,
+  },
+  workDaySummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.sm,
+  },
+  workDayLabel: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.primary,
+  },
+  workDayTime: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+  },
+
+  // Task Edit Screen Styles
+  dateButton: {
+    padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: theme.spacing.sm,
-    zIndex: 1000,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.lg,
+    alignItems: 'center',
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.lg,
+  },
+  timeButton: {
+    flex: 1,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    marginHorizontal: theme.spacing.xs,
+    alignItems: 'center',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.lg,
+  },
+  statusButton: {
+    flex: 1,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    marginHorizontal: theme.spacing.xs,
+    alignItems: 'center',
+  },
+  activeStatus: {
+    backgroundColor: theme.colors.primary,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...theme.shadows.md,
   },
-  dropdownItem: {
-    padding: theme.spacing.sm,
-    borderRadius: theme.borderRadius.sm,
+  cardContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  dropdownItemSelected: {
-    backgroundColor: theme.colors.surface,
+  formSectionWide: {
+    width: '100%',
+    alignSelf: 'center',
+    maxWidth: 500,
+  },
+  typeContainerRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    justifyContent: 'space-between',
+    gap: 8,
   },
 }); 

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Checkbox from 'expo-checkbox';
 import { Badge } from './Badge';
 import { theme } from '../theme';
-import { commonStyles } from '../theme/styles';
+import { sharedStyles } from '../theme/styles';
 import { LifeAdminTask } from '../data/lifeAdminTasks';
 
 interface LifeAdminTaskItemProps {
@@ -22,17 +22,17 @@ export const LifeAdminTaskItem: React.FC<LifeAdminTaskItemProps> = ({
 }) => {
   return (
     <View style={[
-      commonStyles.card,
+      sharedStyles.card,
       { borderLeftWidth: 6, borderLeftColor: task.category === 'admin' ? theme.colors.primary : theme.colors.warning }
     ]}>
-      <View style={commonStyles.cardContent}>
+      <View style={sharedStyles.cardContentRow}>
         <Checkbox
           value={isSelected}
           onValueChange={() => onToggle(task.id)}
           color={isSelected ? theme.colors.primary : undefined}
         />
         <View style={styles.taskInfo}>
-          <Text style={commonStyles.text}>{task.title}</Text>
+          <Text style={sharedStyles.cardText}>{task.title}</Text>
           <TouchableOpacity onPress={() => onFrequencyPress(task)}>
             <Badge
               label={task.frequency}

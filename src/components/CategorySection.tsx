@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Checkbox from 'expo-checkbox';
 import { theme } from '../theme';
-import { commonStyles } from '../theme/styles';
+import { sharedStyles } from '../theme/styles';
 
 interface CategorySectionProps {
   category: string;
@@ -25,17 +25,17 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
   return (
     <View style={styles.categoryContainer}>
       <TouchableOpacity
-        style={commonStyles.card}
+        style={sharedStyles.card}
         onPress={() => onToggle(category)}
       >
-        <View style={commonStyles.cardHeader}>
-          <View style={commonStyles.cardContent}>
+        <View style={sharedStyles.cardHeader}>
+          <View style={sharedStyles.cardContentRow}>
             <Checkbox
               value={isAllSelected}
               onValueChange={() => onToggleAll(category)}
               color={theme.colors.primary}
             />
-            <Text style={commonStyles.title}>
+            <Text style={sharedStyles.cardTitle}>
               {category.charAt(0).toUpperCase() + category.slice(1)}
             </Text>
           </View>

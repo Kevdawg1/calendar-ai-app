@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { Goal } from '../types';
+import { sharedStyles } from '../theme/styles';
 
 interface AddTaskModalProps {
   visible: boolean;
@@ -14,6 +15,7 @@ interface AddTaskModalProps {
     goalId: string;
   }) => void;
   goals: Goal[];
+  selectedDate: string;
 }
 
 export const AddTaskModal: React.FC<AddTaskModalProps> = ({
@@ -21,6 +23,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
   onClose,
   onSave,
   goals,
+  selectedDate,
 }) => {
   const [newTask, setNewTask] = React.useState({
     title: '',
@@ -50,19 +53,19 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Add New Task</Text>
+      <View style={sharedStyles.modalContainer}>
+        <View style={sharedStyles.modalContent}>
+          <Text style={sharedStyles.modalTitle}>Add New Task</Text>
           
           <TextInput
-            style={styles.input}
+            style={sharedStyles.input}
             placeholder="Task Title"
             value={newTask.title}
             onChangeText={(text) => setNewTask({ ...newTask, title: text })}
           />
 
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[sharedStyles.input, sharedStyles.textArea]}
             placeholder="Description"
             multiline
             value={newTask.description}
@@ -70,7 +73,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
           />
 
           <TextInput
-            style={styles.input}
+            style={sharedStyles.input}
             placeholder="Duration (minutes)"
             keyboardType="numeric"
             value={newTask.duration}
@@ -78,144 +81,62 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
           />
 
           <TextInput
-            style={styles.input}
+            style={sharedStyles.input}
             placeholder="Start Time (HH:MM)"
             value={newTask.startTime}
             onChangeText={(text) => setNewTask({ ...newTask, startTime: text })}
           />
 
           <TextInput
-            style={styles.input}
+            style={sharedStyles.input}
             placeholder="End Time (HH:MM)"
             value={newTask.endTime}
             onChangeText={(text) => setNewTask({ ...newTask, endTime: text })}
           />
 
-          <View style={styles.goalSelector}>
-            <Text style={styles.label}>Associated Goal (Optional)</Text>
-            <ScrollView style={styles.goalList}>
+          <View style={sharedStyles.goalSelector}>
+            <Text style={sharedStyles.label}>Associated Goal (Optional)</Text>
+            <ScrollView style={sharedStyles.goalList}>
               <TouchableOpacity
                 style={[
-                  styles.goalOption,
-                  !newTask.goalId && styles.selectedGoal
+                  sharedStyles.goalOption,
+                  !newTask.goalId && sharedStyles.selectedGoal
                 ]}
                 onPress={() => setNewTask({ ...newTask, goalId: '' })}
               >
-                <Text style={styles.goalOptionText}>No Goal</Text>
+                <Text style={sharedStyles.goalOptionText}>No Goal</Text>
               </TouchableOpacity>
               {goals.map((goal) => (
                 <TouchableOpacity
                   key={goal.id}
                   style={[
-                    styles.goalOption,
-                    newTask.goalId === goal.id && styles.selectedGoal
+                    sharedStyles.goalOption,
+                    newTask.goalId === goal.id && sharedStyles.selectedGoal
                   ]}
                   onPress={() => setNewTask({ ...newTask, goalId: goal.id })}
                 >
-                  <Text style={styles.goalOptionText}>{goal.text}</Text>
+                  <Text style={sharedStyles.goalOptionText}>{goal.text}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
           </View>
 
-          <View style={styles.modalButtons}>
+          <View style={sharedStyles.modalButtons}>
             <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
+              style={[sharedStyles.modalButton, sharedStyles.cancelButton]}
               onPress={onClose}
             >
-              <Text style={styles.modalButtonText}>Cancel</Text>
+              <Text style={sharedStyles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton]}
+              style={[sharedStyles.modalButton, sharedStyles.saveButton]}
               onPress={handleSave}
             >
-              <Text style={styles.modalButtonText}>Save</Text>
+              <Text style={sharedStyles.modalButtonText}>Save</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
     </Modal>
   );
-};
-
-const styles = StyleSheet.create({
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  goalSelector: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  goalList: {
-    maxHeight: 150,
-  },
-  goalOption: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  selectedGoal: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  goalOptionText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#FF3B30',
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-  },
-  modalButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-}); 
+}; 
