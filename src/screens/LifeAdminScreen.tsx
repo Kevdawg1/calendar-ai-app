@@ -22,6 +22,7 @@ import { LifeAdminTaskItem } from '../components/LifeAdminTaskItem';
 import { CategorySection } from '../components/CategorySection';
 import { FrequencyModal } from '../components/FrequencyModal';
 import { userPreferencesService, UserPreferences } from '../services/userPreferencesService';
+import { checkedTasksService } from '../services/checkedTasksService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -48,6 +49,7 @@ export const LifeAdminScreen = () => {
       ),
     });
     loadUserPreferences();
+    loadCheckedTasks();
   }, [navigation]);
 
   const loadUserPreferences = async () => {
@@ -56,6 +58,15 @@ export const LifeAdminScreen = () => {
       setUserPreferences(preferences);
     } catch (error) {
       console.error('Error loading user preferences:', error);
+    }
+  };
+
+  const loadCheckedTasks = async () => {
+    try {
+      const checkedTasks = await checkedTasksService.getCheckedTasks();
+      setSelectedTasks(checkedTasks);
+    } catch (error) {
+      console.error('Error loading checked tasks:', error);
     }
   };
 
@@ -72,17 +83,19 @@ export const LifeAdminScreen = () => {
     setExpandedCategories(newExpanded);
   };
 
-  const toggleTask = (taskId: string) => {
+  const toggleTask = async (taskId: string) => {
     const newSelected = new Set(selectedTasks);
     if (newSelected.has(taskId)) {
       newSelected.delete(taskId);
+      await checkedTasksService.removeCheckedTask(taskId);
     } else {
       newSelected.add(taskId);
+      await checkedTasksService.addCheckedTask(taskId);
     }
     setSelectedTasks(newSelected);
   };
 
-  const toggleCategoryAll = (category: string) => {
+  const toggleCategoryAll = async (category: string) => {
     const categoryTasks = tasks.filter(task => task.category === category);
     const categoryTaskIds = new Set(categoryTasks.map(task => task.id));
     
@@ -90,9 +103,15 @@ export const LifeAdminScreen = () => {
     
     const newSelected = new Set(selectedTasks);
     if (allSelected) {
-      categoryTaskIds.forEach(taskId => newSelected.delete(taskId));
+      categoryTaskIds.forEach(taskId => {
+        newSelected.delete(taskId);
+        checkedTasksService.removeCheckedTask(taskId);
+      });
     } else {
-      categoryTaskIds.forEach(taskId => newSelected.add(taskId));
+      categoryTaskIds.forEach(taskId => {
+        newSelected.add(taskId);
+        checkedTasksService.addCheckedTask(taskId);
+      });
     }
     setSelectedTasks(newSelected);
   };
@@ -133,6 +152,10 @@ export const LifeAdminScreen = () => {
         goalId: 'life-admin'
       }));
       await taskService.addTasks(tasksWithGoalId);
+
+      // Clear checked tasks after successful scheduling
+      await checkedTasksService.clearCheckedTasks();
+      setSelectedTasks(new Set());
 
       Alert.alert(
         'Success',

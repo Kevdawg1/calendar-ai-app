@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert, StyleSheet } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -27,6 +27,9 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   const [goals, setGoals] = useState<Goal[]>([]);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isAddTaskModalVisible, setIsAddTaskModalVisible] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | undefined>();
+  const [isEditing, setIsEditing] = useState(false);
+  const [updateAll, setUpdateAll] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -91,7 +94,44 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   };
 
   const handleTaskPress = (taskId: string) => {
-    navigation.navigate('TaskEdit', { taskId });
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (task.recurrence) {
+      Alert.alert(
+        'Update Recurring Task',
+        'Would you like to update this occurrence only or all future occurrences?',
+        [
+          {
+            text: 'This Occurrence Only',
+            onPress: () => {
+              setTaskToEdit(task);
+              setIsEditing(true);
+              setUpdateAll(false);
+              setIsAddTaskModalVisible(true);
+            },
+          },
+          {
+            text: 'All Future Occurrences',
+            onPress: () => {
+              setTaskToEdit(task);
+              setIsEditing(true);
+              setUpdateAll(true);
+              setIsAddTaskModalVisible(true);
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ]
+      );
+    } else {
+      setTaskToEdit(task);
+      setIsEditing(true);
+      setUpdateAll(false);
+      setIsAddTaskModalVisible(true);
+    }
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -106,15 +146,58 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   };
 
   const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
-    try {
-      const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
-      if (updatedTask) {
-        const updatedTasks = await taskService.getAllTasks();
-        setTasks(updatedTasks);
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (task.recurrence) {
+      Alert.alert(
+        'Update Recurring Task',
+        'Would you like to update this occurrence only or all future occurrences?',
+        [
+          {
+            text: 'This Occurrence Only',
+            onPress: async () => {
+              try {
+                const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
+                if (updatedTask) {
+                  const updatedTasks = await taskService.getAllTasks();
+                  setTasks(updatedTasks);
+                }
+              } catch (error) {
+                console.error('Error updating task status:', error);
+                Alert.alert('Error', 'Failed to update task status');
+              }
+            },
+          },
+          {
+            text: 'All Future Occurrences',
+            onPress: async () => {
+              try {
+                const updatedTasks = await taskService.updateRecurringTask(taskId, { status: newStatus });
+                setTasks(updatedTasks);
+              } catch (error) {
+                console.error('Error updating recurring task status:', error);
+                Alert.alert('Error', 'Failed to update recurring task status');
+              }
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ]
+      );
+    } else {
+      try {
+        const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
+        if (updatedTask) {
+          const updatedTasks = await taskService.getAllTasks();
+          setTasks(updatedTasks);
+        }
+      } catch (error) {
+        console.error('Error updating task status:', error);
+        Alert.alert('Error', 'Failed to update task status');
       }
-    } catch (error) {
-      console.error('Error updating task status:', error);
-      Alert.alert('Error', 'Failed to update task status');
     }
   };
 
@@ -125,6 +208,12 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     startTime: string;
     endTime: string;
     goalId: string;
+    startDate: string;
+    recurrence?: {
+      frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal';
+      interval: number;
+      endDate: string;
+    };
   }) => {
     if (!taskData.title.trim()) {
       Alert.alert('Error', 'Please enter a title');
@@ -142,27 +231,70 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
       return;
     }
 
-    const task: Task = {
-      id: generateUUID(),
-      title: taskData.title.trim(),
-      description: taskData.description.trim(),
-      duration: durationNum,
-      startDate: selectedDate,
-      startTime: taskData.startTime,
-      endTime: taskData.endTime,
-      goalId: taskData.goalId || 'no-goal',
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    if (isEditing && taskToEdit) {
+      try {
+        if (updateAll && taskToEdit.recurrence) {
+          const updatedTasks = await taskService.updateRecurringTask(taskToEdit.id, {
+            ...taskData,
+            duration: durationNum,
+          });
+          setTasks(updatedTasks);
+        } else {
+          const updatedTask = await taskService.updateTask(taskToEdit.id, {
+            ...taskData,
+            duration: durationNum,
+          });
+          if (updatedTask) {
+            const updatedTasks = await taskService.getAllTasks();
+            setTasks(updatedTasks);
+          }
+        }
+        setIsAddTaskModalVisible(false);
+        setTaskToEdit(undefined);
+        setIsEditing(false);
+        setUpdateAll(false);
+      } catch (error) {
+        console.error('Error updating task:', error);
+        Alert.alert('Error', 'Failed to update task');
+      }
+    } else {
+      // Check for duplicate tasks
+      const isDuplicate = tasks.some(task => 
+        task.title === taskData.title.trim() &&
+        task.startDate === taskData.startDate &&
+        task.startTime === taskData.startTime &&
+        task.endTime === taskData.endTime &&
+        task.goalId === taskData.goalId
+      );
 
-    try {
-      const addedTask = (await taskService.addTasks([task]))[0];
-      setTasks([...tasks, addedTask]);
-      setIsAddTaskModalVisible(false);
-    } catch (error) {
-      console.error('Error adding task:', error);
-      Alert.alert('Error', 'Failed to add task');
+      if (isDuplicate) {
+        Alert.alert('Error', 'A task with the same title, date, time, and goal already exists');
+        return;
+      }
+
+      const task: Task = {
+        id: generateUUID(),
+        title: taskData.title.trim(),
+        description: taskData.description.trim(),
+        duration: durationNum,
+        startDate: taskData.startDate,
+        startTime: taskData.startTime,
+        endTime: taskData.endTime,
+        goalId: taskData.goalId || 'no-goal',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        recurrence: taskData.recurrence
+      };
+
+      try {
+        const addedTask = (await taskService.addTasks([task]))[0];
+        setTasks([...tasks, addedTask]);
+        setIsAddTaskModalVisible(false);
+      } catch (error) {
+        console.error('Error adding task:', error);
+        Alert.alert('Error', 'Failed to add task');
+      }
     }
   };
 
@@ -297,8 +429,32 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     setSelectedDate(day.dateString);
   };
 
+  const handleTodayPress = () => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    setSelectedDate(today);
+  };
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={handleTodayPress}
+        >
+          <Text style={styles.headerButtonText}>Today</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
+
   return (
     <View style={sharedStyles.container}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <Text style={[sharedStyles.header, { marginBottom: 0 }]}>Calendar</Text>
+        <TouchableOpacity style={styles.headerButton} onPress={handleTodayPress}>
+          <Text style={styles.headerButtonText}>Today</Text>
+        </TouchableOpacity>
+      </View>
       <Calendar
         current={selectedDate}
         onDayPress={handleDayPress}
@@ -354,12 +510,6 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
           <Text style={sharedStyles.header}>
             {format(parseISO(selectedDate), 'EEEE, MMMM d, yyyy')}
           </Text>
-          <TouchableOpacity
-            style={sharedStyles.button}
-            onPress={() => setIsAddTaskModalVisible(true)}
-          >
-            <Text style={sharedStyles.buttonText}>Add Task</Text>
-          </TouchableOpacity>
         </View>
 
         <TimeGrid
@@ -382,11 +532,31 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
 
       <AddTaskModal
         visible={isAddTaskModalVisible}
-        onClose={() => setIsAddTaskModalVisible(false)}
+        onClose={() => {
+          setIsAddTaskModalVisible(false);
+          setTaskToEdit(undefined);
+          setIsEditing(false);
+          setUpdateAll(false);
+        }}
         onSave={handleAddTask}
         goals={goals}
         selectedDate={selectedDate}
+        taskToEdit={taskToEdit}
+        isEditing={isEditing}
+        onUpdateAll={updateAll}
       />
     </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  headerButton: {
+    marginRight: theme.spacing.md,
+    padding: theme.spacing.sm,
+  },
+  headerButtonText: {
+    color: theme.colors.primary,
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+  },
+}); 
