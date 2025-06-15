@@ -1,16 +1,17 @@
 import axios from 'axios';
 import { Goal, Task } from '../types';
 import { generateUUID } from '../utils/uuid';
-
-const ENDPOINT = 'https://calendar-ai.openai.azure.com/';
-const API_KEY = 'E5iUsb1W3fHZgYHoxYagSAPHqEe9l9hInO1wJYnD2Th4JOhCPaCiJQQJ99BFACL93NaXJ3w3AAAAACOGKXdj';
-const DEPLOYMENT = 'gpt-35-turbo';
+import { UserPreferences } from './userPreferencesService';
+import { getAvailableTimeBlocks, OPENAI_CONFIG } from '../utils/promptUtils';
 
 export const openaiService = {
-  generateTasks: async (goals: Goal[], existingTasks?: Task[]): Promise<Task[]> => {
+  generateTasks: async (goals: Goal[], existingTasks?: Task[], userPreferences?: UserPreferences): Promise<Task[]> => {
     try {
       const currentDate = new Date();
       console.log('Starting task generation for goals:', goals);
+
+      // Compose user preferences summary for prompt
+      const availableBlocksText = getAvailableTimeBlocks(userPreferences);
 
       // Step 1: Identify key components
       const componentsPrompt = `
@@ -21,7 +22,7 @@ export const openaiService = {
           Priority: ${goal.priority}
           Weekly Time: ${goal.timeCommitment} hours
       `).join('\n')}
-
+      ${availableBlocksText}
       Return a JSON array of components, each with:
       - name: string (name of the component)
       - description: string (brief explanation of why this component is important)
@@ -60,17 +61,15 @@ export const openaiService = {
       const subtasksPrompt = `
       For each key component, generate specific subtasks over the ${taskPeriodIncrement} month period.
       Consider the weekly time commitment of ${goals[0].timeCommitment} hours.
-
+      ${availableBlocksText}
       Components:
       ${JSON.stringify(components, null, 2)}
-
       For each subtask, provide:
       - title: string (specific action item)
       - description: string (reasoning for why this task is important)
       - estimatedDuration: number (in minutes)
       - priority: string (high/medium/low)
       - timeframe: string (specific date range based on the goal type's increment)
-
       Return a JSON array of subtasks grouped by component.
       `;
 
@@ -111,9 +110,8 @@ export const openaiService = {
       const calendarPrompt = `
       Format the following subtasks into calendar-ready tasks:
       ${JSON.stringify(subtasksByComponent, null, 2)}
-
       Current date: ${currentDate.toISOString().split('T')[0]}
-
+      ${availableBlocksText}
       For each task, provide a JSON object with:
       - title: string (from subtask)
       - description: string (from subtask)
@@ -122,7 +120,6 @@ export const openaiService = {
       - startTime: string (HH:MM)
       - endTime: string (HH:MM)
       - goalId: string (${goals[0].id})
-
       Consider:
       - Spread tasks across available time
       - Respect the goal's weekly time commitment
@@ -130,7 +127,7 @@ export const openaiService = {
       - Account for task dependencies
       - Schedule tasks between ${taskPeriodStart.toISOString().split('T')[0]} and ${taskPeriodEnd.toISOString().split('T')[0]}
       ${existingTasks ? 'Consider existing tasks and avoid scheduling conflicts.' : ''}
-
+      Do not schedule tasks during work/study or sleep hours.
       Return ONLY a JSON array of these task objects.
       `;
 
@@ -176,7 +173,7 @@ async function makeOpenAIRequest(prompt: string): Promise<string> {
   console.log('Making OpenAI request with prompt:', prompt);
   
   const response = await axios.post(
-    `${ENDPOINT}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview`,
+    `${OPENAI_CONFIG.endpoint}/openai/deployments/${OPENAI_CONFIG.deployment}/chat/completions?api-version=2024-02-15-preview`,
     {
       messages: [
         {
@@ -188,14 +185,14 @@ async function makeOpenAIRequest(prompt: string): Promise<string> {
           content: prompt
         }
       ],
-      max_tokens: 2000,
-      temperature: 0.7,
+      max_tokens: OPENAI_CONFIG.maxTokens,
+      temperature: OPENAI_CONFIG.temperature,
       response_format: { type: "json_object" }
     },
     {
       headers: {
         'Content-Type': 'application/json',
-        'api-key': API_KEY
+        'api-key': OPENAI_CONFIG.apiKey
       }
     }
   );

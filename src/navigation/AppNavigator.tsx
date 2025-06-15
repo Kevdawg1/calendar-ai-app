@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import HomeScreen from '../screens/HomeScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import { GoalsScreen } from '../screens/GoalsScreen';
 import TaskEditScreen from '../screens/TaskEditScreen';
 import { LifeAdminScreen } from '../screens/LifeAdminScreen';
+import { SurveyScreen } from '../screens/SurveyScreen';
 import { theme } from '../theme';
 import { Task } from '../types';
 import { LifeAdminTask } from '../data/lifeAdminTasks';
+import { userPreferencesService } from '../services/userPreferencesService';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -19,14 +21,35 @@ export type RootStackParamList = {
     taskId?: string;
   };
   LifeAdmin: undefined;
+  Survey: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 export const AppNavigator = () => {
+  const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList | null>(null);
+
+  useEffect(() => {
+    const checkSurveyStatus = async () => {
+      try {
+        const surveyCompleted = await userPreferencesService.isSurveyCompleted();
+        setInitialRoute(surveyCompleted ? 'Home' : 'Survey');
+      } catch (error) {
+        console.error('Error checking survey status:', error);
+        setInitialRoute('Survey');
+      }
+    };
+
+    checkSurveyStatus();
+  }, []);
+
+  if (!initialRoute) {
+    return null; // Or a loading screen
+  }
+
   return (
     <Stack.Navigator
-      initialRouteName="Home"
+      initialRouteName={initialRoute}
       screenOptions={{
         headerStyle: {
           backgroundColor: theme.colors.primary,
@@ -37,6 +60,14 @@ export const AppNavigator = () => {
         },
       }}
     >
+      <Stack.Screen
+        name="Survey"
+        component={SurveyScreen}
+        options={{
+          title: 'Welcome',
+          headerShown: false,
+        }}
+      />
       <Stack.Screen
         name="Home"
         component={HomeScreen}

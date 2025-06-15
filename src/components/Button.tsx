@@ -35,7 +35,9 @@ export const Button: React.FC<ButtonProps> = ({
       case 'secondary':
         return {
           ...baseStyle,
-          backgroundColor: theme.colors.secondary,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderColor: theme.colors.primary,
         };
       case 'danger':
         return {
@@ -86,6 +88,7 @@ export const Button: React.FC<ButtonProps> = ({
         style={[
           styles.text,
           textStyle,
+          variant === 'secondary' ? { color: theme.colors.primary } : null,
         ]}
       >
         {title}

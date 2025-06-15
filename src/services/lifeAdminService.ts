@@ -2,13 +2,11 @@ import axios from 'axios';
 import { LifeAdminTask } from '../data/lifeAdminTasks';
 import { Task } from '../types';
 import { generateUUID } from '../utils/uuid';
-
-const ENDPOINT = 'https://calendar-ai.openai.azure.com/';
-const API_KEY = 'E5iUsb1W3fHZgYHoxYagSAPHqEe9l9hInO1wJYnD2Th4JOhCPaCiJQQJ99BFACL93NaXJ3w3AAAAACOGKXdj';
-const DEPLOYMENT = 'gpt-35-turbo';
+import { UserPreferences } from './userPreferencesService';
+import { getAvailableTimeBlocks, OPENAI_CONFIG } from '../utils/promptUtils';
 
 export const lifeAdminService = {
-  scheduleTasks: async (tasks: LifeAdminTask[]): Promise<Task[]> => {
+  scheduleTasks: async (tasks: LifeAdminTask[], userPreferences?: UserPreferences): Promise<Task[]> => {
     try {
       console.log('Starting task scheduling for life admin tasks:', tasks);
 
@@ -20,6 +18,9 @@ export const lifeAdminService = {
       const endDate = new Date();
       endDate.setFullYear(endDate.getFullYear() + 1);
       const endDateStr = endDate.toISOString().split('T')[0];
+
+      // Compose user preferences summary for prompt
+      const availableBlocksText = getAvailableTimeBlocks(userPreferences);
 
       // Group tasks by category
       const tasksByCategory = tasks.reduce((acc, task) => {
@@ -43,7 +44,7 @@ export const lifeAdminService = {
             Category: ${task.category}
             Frequency: ${task.frequency}
         `).join('\n')}
-
+        ${availableBlocksText}
         For each task, create a recurring calendar event with the following rules:
         - Daily tasks: Repeat every day (interval: 1)
         - Weekly tasks: Repeat every week (interval: 1)
@@ -69,6 +70,7 @@ export const lifeAdminService = {
         - Consider task dependencies
         - Spread tasks across the week/month to avoid clustering
         - For ${category} tasks, consider typical times for these activities
+        Do not schedule tasks during work/study or sleep hours.
 
         Return ONLY a JSON array of these task objects.
         `;
@@ -144,7 +146,7 @@ async function makeOpenAIRequest(prompt: string): Promise<string> {
   console.log('Making OpenAI request with prompt:', prompt);
   
   const response = await axios.post(
-    `${ENDPOINT}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview`,
+    `${OPENAI_CONFIG.endpoint}/openai/deployments/${OPENAI_CONFIG.deployment}/chat/completions?api-version=2024-02-15-preview`,
     {
       messages: [
         {
@@ -156,14 +158,14 @@ async function makeOpenAIRequest(prompt: string): Promise<string> {
           content: prompt
         }
       ],
-      max_tokens: 4000,
-      temperature: 0.7,
+      max_tokens: OPENAI_CONFIG.maxTokens,
+      temperature: OPENAI_CONFIG.temperature,
       response_format: { type: "json_object" }
     },
     {
       headers: {
         'Content-Type': 'application/json',
-        'api-key': API_KEY
+        'api-key': OPENAI_CONFIG.apiKey
       }
     }
   );
