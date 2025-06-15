@@ -30,13 +30,31 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
 
   useEffect(() => {
     const loadData = async () => {
-      const allTasks = await taskService.getAllTasks();
-      const allGoals = goalService.getAllGoals();
-      const filteredTasks = allTasks.filter(
-        (t: any) => t && t.startDate && t.goalId && t.status && t.createdAt && t.updatedAt
-      );
-      setTasks(filteredTasks);
-      setGoals(allGoals);
+      try {
+        console.log('Loading tasks and goals...');
+        const allTasks = await taskService.getAllTasks();
+        const allGoals = await goalService.getAllGoals();
+        
+        console.log('Loaded tasks:', allTasks);
+        console.log('Loaded goals:', allGoals);
+        
+        const filteredTasks = allTasks.filter(
+          (t: any) => {
+            const isValid = t && t.startDate && t.goalId && t.status && t.createdAt && t.updatedAt;
+            if (!isValid) {
+              console.log('Invalid task found:', t);
+            }
+            return isValid;
+          }
+        );
+        
+        console.log('Filtered tasks:', filteredTasks);
+        setTasks(filteredTasks);
+        setGoals(allGoals);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        Alert.alert('Error', 'Failed to load tasks and goals');
+      }
     };
 
     loadData();
@@ -149,18 +167,30 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   };
 
   const getTasksForDate = (date: string) => {
-    return tasks.filter(task => {
-      if (!task.startDate || !task.goalId || !task.status || !task.createdAt || !task.updatedAt) return false;
+    console.log('Getting tasks for date:', date);
+    console.log('All tasks:', tasks);
+    
+    const filteredTasks = tasks.filter(task => {
+      if (!task.startDate || !task.goalId || !task.status || !task.createdAt || !task.updatedAt) {
+        console.log('Task filtered out due to missing required fields:', task);
+        return false;
+      }
+      
       if (task.startDate === date) {
+        console.log('Task matches date:', task);
         return true;
       }
+      
       if (task.recurrence) {
         const startDate = new Date(task.startDate);
         const endDate = new Date(task.recurrence.endDate);
         const currentDate = new Date(date);
+        
         if (currentDate < startDate || currentDate > endDate) {
+          console.log('Task outside recurrence range:', task);
           return false;
         }
+        
         const daysDiff = Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
         const isRecurring = (() => {
           switch (task.recurrence.frequency) {
@@ -181,32 +211,55 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
               return false;
           }
         })();
+        
+        if (isRecurring) {
+          console.log('Task is recurring for this date:', task);
+        }
         return isRecurring;
       }
+      
       return false;
     });
+    
+    console.log('Filtered tasks for date:', filteredTasks);
+    return filteredTasks;
+  };
+
+  const getGoalColor = (goalId: string) => {
+    if (goalId === 'life-admin') return '#007AFF';
+    const goal = goals.find(g => g.id === goalId);
+    return goal?.color || '#FF9500';
   };
 
   const getMarkedDates = (tasks: Task[]) => {
+    console.log('Getting marked dates for tasks:', tasks);
     const marked: { [key: string]: any } = {};
+    
+    // Always mark the selected date
+    marked[selectedDate] = {
+      selected: true,
+      selectedColor: theme.colors.primary,
+      dots: []
+    };
+    
     tasks.forEach(task => {
+      const color = getGoalColor(task.goalId);
+      console.log('Processing task:', task.id, 'with color:', color);
+      
       if (task.recurrence) {
         const startDate = new Date(task.startDate);
         const endDate = new Date(task.recurrence.endDate);
         let currentDate = new Date(startDate);
+        console.log('Processing recurring task from', startDate, 'to', endDate);
+        
         while (currentDate <= endDate) {
           const dateStr = currentDate.toISOString().split('T')[0];
           if (!marked[dateStr]) {
-            marked[dateStr] = {
-              dots: []
-            };
+            marked[dateStr] = { dots: [] };
           }
-          const color = task.goalId === 'life-admin' ? '#007AFF' : '#FF9500';
           if (!marked[dateStr].dots.some((dot: any) => dot.color === color)) {
-            marked[dateStr].dots.push({
-              color,
-              key: task.id
-            });
+            marked[dateStr].dots.push({ color, key: task.id });
+            console.log('Added dot for date:', dateStr, 'with color:', color);
           }
           switch (task.recurrence.frequency) {
             case 'daily':
@@ -227,38 +280,72 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         }
       } else {
         if (!marked[task.startDate]) {
-          marked[task.startDate] = {
-            dots: []
-          };
+          marked[task.startDate] = { dots: [] };
         }
-        const color = task.goalId === 'life-admin' ? '#007AFF' : '#FF9500';
         if (!marked[task.startDate].dots.some((dot: any) => dot.color === color)) {
-          marked[task.startDate].dots.push({
-            color,
-            key: task.id
-          });
+          marked[task.startDate].dots.push({ color, key: task.id });
+          console.log('Added dot for non-recurring task on date:', task.startDate, 'with color:', color);
         }
       }
     });
-
-    if (marked[selectedDate]) {
-      marked[selectedDate].selected = true;
-      marked[selectedDate].selectedColor = '#007AFF';
-    }
-
+    
+    console.log('Final marked dates:', marked);
     return marked;
+  };
+
+  const handleDayPress = (day: { dateString: string }) => {
+    setSelectedDate(day.dateString);
   };
 
   return (
     <View style={sharedStyles.container}>
       <Calendar
-        onDayPress={(day: { dateString: string }) => setSelectedDate(day.dateString)}
+        current={selectedDate}
+        onDayPress={handleDayPress}
         markedDates={getMarkedDates(tasks)}
+        markingType="multi-dot"
         theme={{
           todayTextColor: theme.colors.primary,
           selectedDayBackgroundColor: theme.colors.primary,
+          selectedDayTextColor: '#fff',
           dotColor: theme.colors.primary,
+          selectedDotColor: '#fff',
           arrowColor: theme.colors.primary,
+          dotStyle: {
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            marginTop: 2,
+          },
+          'stylesheet.calendar.main': {
+            container: {
+              paddingLeft: 5,
+              paddingRight: 5,
+            },
+            dayContainer: {
+              width: 32,
+              height: 32,
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+            selected: {
+              backgroundColor: theme.colors.primary,
+              borderRadius: 16,
+              width: 32,
+              height: 32,
+            },
+            today: {
+              backgroundColor: 'transparent',
+            },
+            todayText: {
+              color: theme.colors.primary,
+            },
+          },
+          'stylesheet.calendar.header': {
+            dayTextAtIndex0: {
+              color: theme.colors.primary,
+            },
+          },
         }}
       />
 
@@ -281,6 +368,7 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
           onTaskDelete={handleDeleteTask}
           onStatusChange={handleStatusChange}
           getGoalText={getGoalText}
+          getGoalColor={getGoalColor}
         />
       </ScrollView>
 
