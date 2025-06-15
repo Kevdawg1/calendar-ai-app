@@ -439,7 +439,7 @@ export const lifeAdminTasks: LifeAdminTask[] = [
     id: 'a-3',
     title: 'Open and sort mail',
     category: 'admin',
-    frequency: 'daily',
+    frequency: 'weekly',
     enabled: false,
   },
   {

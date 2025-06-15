@@ -118,5 +118,35 @@ export const taskService = {
       return task;
     });
     await saveTasks();
+  },
+
+  updateRecurringTask: async (taskId: string, updates: TaskUpdate): Promise<Task[]> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || !task.recurrence) return tasks;
+
+    const updatedTasks = tasks.map(t => {
+      if (t.id === taskId || (
+        t.recurrence &&
+        t.title === task.title &&
+        t.goalId === task.goalId &&
+        t.startTime === task.startTime &&
+        t.endTime === task.endTime &&
+        new Date(t.startDate) >= new Date(task.startDate)
+      )) {
+        return {
+          ...t,
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return t;
+    });
+
+    tasks = updatedTasks;
+    await saveTasks();
+    return updatedTasks;
   }
 }; 
