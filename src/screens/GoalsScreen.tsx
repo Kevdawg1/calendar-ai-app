@@ -13,20 +13,19 @@ import { Section } from '../components/Section';
 import { EmptyState } from '../components/EmptyState';
 import { Button as CustomButton } from '../components/Button';
 import { userPreferencesService, UserPreferences } from '../services/userPreferencesService';
-import { commonStyles, colors, spacing } from '../styles/common';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
-export const GoalsScreen: React.FC = () => {
+export const GoalsScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [newGoalText, setNewGoalText] = useState('');
   const [selectedType, setSelectedType] = useState<'short' | 'medium' | 'long'>('short');
   const [selectedPriority, setSelectedPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [timeCommitment, setTimeCommitment] = useState('5');
-  const [loading, setLoading] = useState(false);
-  const [userPreferences, setUserPreferences] = useState<UserPreferences | undefined>();
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState<string>('');
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
 
   useEffect(() => {
     loadGoals();
@@ -46,19 +45,15 @@ export const GoalsScreen: React.FC = () => {
     });
   }, [navigation]);
 
-  const loadGoals = async () => {
-    try {
-      const loadedGoals = await goalService.getAllGoals();
-      setGoals(loadedGoals);
-    } catch (error) {
-      console.error('Error loading goals:', error);
-    }
+  const loadGoals = () => {
+    const allGoals = goalService.getAllGoals();
+    setGoals(allGoals);
   };
 
   const loadUserPreferences = async () => {
     try {
-      const prefs = await userPreferencesService.getPreferences();
-      setUserPreferences(prefs || undefined);
+      const preferences = await userPreferencesService.getPreferences();
+      setUserPreferences(preferences);
     } catch (error) {
       console.error('Error loading user preferences:', error);
     }
@@ -111,15 +106,33 @@ export const GoalsScreen: React.FC = () => {
 
   const handleGenerateTasks = async (goal: Goal) => {
     try {
-      setLoading(true);
-      const generatedTasks = await openaiService.generateTasks([goal], tasks, userPreferences);
-      setTasks(prevTasks => [...prevTasks, ...generatedTasks]);
-      Alert.alert('Success', 'Tasks have been generated successfully!');
+      setIsLoading(true);
+      setLoadingStage('Brainstorming Key Components...');
+      const tasks = await openaiService.generateTasks([goal], undefined, userPreferences || undefined);
+      
+      if (tasks && tasks.length > 0) {
+        setLoadingStage('Adding to Calendar...');
+        const calendarTasks = tasks.map(task => ({
+          id: task.id,
+          title: task.title,
+          description: task.description || '',
+          duration: task.duration,
+          startDate: task.startDate,
+          startTime: task.startTime,
+          endTime: task.endTime,
+          goalId: goal.id,
+          status: 'pending' as const,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt
+        }));
+        navigation.navigate('Calendar', { tasks: calendarTasks });
+      }
     } catch (error) {
       console.error('Error generating tasks:', error);
       Alert.alert('Error', 'Failed to generate tasks. Please try again.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+      setLoadingStage('');
     }
   };
 
@@ -257,56 +270,58 @@ export const GoalsScreen: React.FC = () => {
   );
 
   const renderGoalItem = ({ item }: { item: Goal }) => (
-    <View style={commonStyles.card}>
-      <Text style={commonStyles.subtitle}>{item.text}</Text>
-      <Text style={{ color: colors.gray[600] }}>Type: {item.type}</Text>
-      <Text style={{ color: colors.gray[600] }}>Priority: {item.priority}</Text>
-      <Text style={{ color: colors.gray[600] }}>Weekly Time: {item.timeCommitment} hours</Text>
-      
+    <View style={styles.goalItem}>
+      <View style={styles.goalHeader}>
+        <Text style={styles.goalTitle}>{item.text}</Text>
+        <View style={styles.goalActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleDeleteGoal(item.id)}
+          >
+            <Ionicons name="trash" size={20} color={theme.colors.danger} />
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.goalDetails}>
+        <Text style={styles.goalType}>Type: {item.type}</Text>
+        <Text style={styles.goalPriority}>Priority: {item.priority}</Text>
+        <Text style={styles.goalTime}>Weekly Time: {item.timeCommitment} hours</Text>
+      </View>
       <TouchableOpacity
-        style={[commonStyles.button, { marginTop: spacing.sm }]}
+        style={styles.generateButton}
         onPress={() => handleGenerateTasks(item)}
-        disabled={loading}
       >
-        {loading ? (
-          <ActivityIndicator color={colors.white} />
-        ) : (
-          <Text style={commonStyles.buttonText}>
-            Generate Tasks
-          </Text>
-        )}
+        <Ionicons name="calendar-outline" size={20} color="#fff" />
+        <Text style={styles.generateButtonText}>Generate Tasks</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <View style={commonStyles.screenContainer}>
-      <Text style={commonStyles.title}>Goals</Text>
+    <View style={styles.container}>
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>{loadingStage}</Text>
+        </View>
+      )}
       
-      <ScrollView style={{ flex: 1 }}>
-        {goals.map((goal, index) => (
-          <View key={index} style={commonStyles.card}>
-            <Text style={commonStyles.subtitle}>{goal.text}</Text>
-            <Text style={{ color: colors.gray[600] }}>Type: {goal.type}</Text>
-            <Text style={{ color: colors.gray[600] }}>Priority: {goal.priority}</Text>
-            <Text style={{ color: colors.gray[600] }}>Weekly Time: {goal.timeCommitment} hours</Text>
-            
-            <TouchableOpacity
-              style={[commonStyles.button, { marginTop: spacing.sm }]}
-              onPress={() => handleGenerateTasks(goal)}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <Text style={commonStyles.buttonText}>
-                  Generate Tasks
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
+      <Section title="">
+        {goals.length === 0 ? (
+          <EmptyState
+            icon="flag"
+            title="No Goals Yet"
+            message="Add your first goal to get started"
+          />
+        ) : (
+          <FlatList
+            data={goals}
+            renderItem={renderGoalItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.goalsList}
+          />
+        )}
+      </Section>
 
       {renderGoalForm()}
     </View>

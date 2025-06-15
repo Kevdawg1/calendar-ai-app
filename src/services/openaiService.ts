@@ -2,7 +2,11 @@ import axios from 'axios';
 import { Goal, Task } from '../types';
 import { generateUUID } from '../utils/uuid';
 import { UserPreferences } from './userPreferencesService';
-import { getAvailableTimeBlocks, OPENAI_CONFIG } from '../utils/promptUtils';
+import { getPromptWithPreferences, parseOpenAIResponse, validateTaskArray } from '../utils/promptUtils';
+
+const ENDPOINT = 'https://calendar-ai.openai.azure.com/';
+const API_KEY = 'E5iUsb1W3fHZgYHoxYagSAPHqEe9l9hInO1wJYnD2Th4JOhCPaCiJQQJ99BFACL93NaXJ3w3AAAAACOGKXdj';
+const DEPLOYMENT = 'gpt-35-turbo';
 
 export const openaiService = {
   generateTasks: async (goals: Goal[], existingTasks?: Task[], userPreferences?: UserPreferences): Promise<Task[]> => {
@@ -10,11 +14,8 @@ export const openaiService = {
       const currentDate = new Date();
       console.log('Starting task generation for goals:', goals);
 
-      // Compose user preferences summary for prompt
-      const availableBlocksText = getAvailableTimeBlocks(userPreferences);
-
       // Step 1: Identify key components
-      const componentsPrompt = `
+      const componentsPrompt = getPromptWithPreferences(`
       Analyze the following life goal and identify its key components:
       ${goals.map(goal => `
         - ${goal.text}
@@ -22,12 +23,11 @@ export const openaiService = {
           Priority: ${goal.priority}
           Weekly Time: ${goal.timeCommitment} hours
       `).join('\n')}
-      ${availableBlocksText}
       Return a JSON array of components, each with:
       - name: string (name of the component)
       - description: string (brief explanation of why this component is important)
       - priority: string (high/medium/low based on the goal's priority)
-      `;
+      `, userPreferences);
 
       console.log('Step 1: Sending components prompt');
       const componentsResponse = await makeOpenAIRequest(componentsPrompt);
@@ -35,11 +35,9 @@ export const openaiService = {
       
       let components;
       try {
-        const parsedResponse = JSON.parse(componentsResponse);
+        const parsedResponse = parseOpenAIResponse(componentsResponse);
         components = Array.isArray(parsedResponse) ? parsedResponse : parsedResponse.components;
-        if (!components || !Array.isArray(components)) {
-          throw new Error('Invalid components format');
-        }
+        components = validateTaskArray(components, 'components');
       } catch (error) {
         console.error('Error parsing components:', error);
         throw new Error('Failed to parse components response');
@@ -58,10 +56,9 @@ export const openaiService = {
       taskPeriodEnd.setMonth(taskPeriodStart.getMonth() + taskPeriodIncrement);
 
       // Step 2: Generate subtasks for each component
-      const subtasksPrompt = `
+      const subtasksPrompt = getPromptWithPreferences(`
       For each key component, generate specific subtasks over the ${taskPeriodIncrement} month period.
       Consider the weekly time commitment of ${goals[0].timeCommitment} hours.
-      ${availableBlocksText}
       Components:
       ${JSON.stringify(components, null, 2)}
       For each subtask, provide:
@@ -71,7 +68,7 @@ export const openaiService = {
       - priority: string (high/medium/low)
       - timeframe: string (specific date range based on the goal type's increment)
       Return a JSON array of subtasks grouped by component.
-      `;
+      `, userPreferences);
 
       console.log('Step 2: Sending subtasks prompt');
       const subtasksResponse = await makeOpenAIRequest(subtasksPrompt);
@@ -79,7 +76,7 @@ export const openaiService = {
 
       let subtasksByComponent;
       try {
-        const parsedResponse = JSON.parse(subtasksResponse);
+        const parsedResponse = parseOpenAIResponse(subtasksResponse);
         console.log('Parsed response:', parsedResponse);
         
         // Handle the object structure where each component is a key with an array of subtasks
@@ -98,20 +95,17 @@ export const openaiService = {
           throw new Error('Invalid subtasks format');
         }
         
-        if (!subtasksByComponent || !Array.isArray(subtasksByComponent)) {
-          throw new Error('Invalid subtasks format');
-        }
+        subtasksByComponent = validateTaskArray(subtasksByComponent, 'subtasks');
       } catch (error) {
         console.error('Error parsing subtasks:', error);
         throw new Error('Failed to parse subtasks response');
       }
 
       // Step 3: Format tasks for calendar
-      const calendarPrompt = `
+      const calendarPrompt = getPromptWithPreferences(`
       Format the following subtasks into calendar-ready tasks:
       ${JSON.stringify(subtasksByComponent, null, 2)}
       Current date: ${currentDate.toISOString().split('T')[0]}
-      ${availableBlocksText}
       For each task, provide a JSON object with:
       - title: string (from subtask)
       - description: string (from subtask)
@@ -129,7 +123,7 @@ export const openaiService = {
       ${existingTasks ? 'Consider existing tasks and avoid scheduling conflicts.' : ''}
       Do not schedule tasks during work/study or sleep hours.
       Return ONLY a JSON array of these task objects.
-      `;
+      `, userPreferences);
 
       console.log('Step 3: Sending calendar prompt');
       const calendarResponse = await makeOpenAIRequest(calendarPrompt);
@@ -137,11 +131,9 @@ export const openaiService = {
 
       let tasks;
       try {
-        const parsedResponse = JSON.parse(calendarResponse);
+        const parsedResponse = parseOpenAIResponse(calendarResponse);
         tasks = Array.isArray(parsedResponse) ? parsedResponse : parsedResponse.tasks;
-        if (!tasks || !Array.isArray(tasks)) {
-          throw new Error('Invalid tasks format');
-        }
+        tasks = validateTaskArray(tasks, 'tasks');
       } catch (error) {
         console.error('Error parsing tasks:', error);
         throw new Error('Failed to parse tasks response');
@@ -173,7 +165,7 @@ async function makeOpenAIRequest(prompt: string): Promise<string> {
   console.log('Making OpenAI request with prompt:', prompt);
   
   const response = await axios.post(
-    `${OPENAI_CONFIG.endpoint}/openai/deployments/${OPENAI_CONFIG.deployment}/chat/completions?api-version=2024-02-15-preview`,
+    `${ENDPOINT}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview`,
     {
       messages: [
         {
@@ -185,14 +177,14 @@ async function makeOpenAIRequest(prompt: string): Promise<string> {
           content: prompt
         }
       ],
-      max_tokens: OPENAI_CONFIG.maxTokens,
-      temperature: OPENAI_CONFIG.temperature,
+      max_tokens: 2000,
+      temperature: 0.7,
       response_format: { type: "json_object" }
     },
     {
       headers: {
         'Content-Type': 'application/json',
-        'api-key': OPENAI_CONFIG.apiKey
+        'api-key': API_KEY
       }
     }
   );

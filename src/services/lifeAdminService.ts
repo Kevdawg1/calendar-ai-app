@@ -3,7 +3,11 @@ import { LifeAdminTask } from '../data/lifeAdminTasks';
 import { Task } from '../types';
 import { generateUUID } from '../utils/uuid';
 import { UserPreferences } from './userPreferencesService';
-import { getAvailableTimeBlocks, OPENAI_CONFIG } from '../utils/promptUtils';
+import { getPromptWithPreferences, parseOpenAIResponse, validateTaskArray } from '../utils/promptUtils';
+
+const ENDPOINT = 'https://calendar-ai.openai.azure.com/';
+const API_KEY = 'E5iUsb1W3fHZgYHoxYagSAPHqEe9l9hInO1wJYnD2Th4JOhCPaCiJQQJ99BFACL93NaXJ3w3AAAAACOGKXdj';
+const DEPLOYMENT = 'gpt-35-turbo';
 
 export const lifeAdminService = {
   scheduleTasks: async (tasks: LifeAdminTask[], userPreferences?: UserPreferences): Promise<Task[]> => {
@@ -18,9 +22,6 @@ export const lifeAdminService = {
       const endDate = new Date();
       endDate.setFullYear(endDate.getFullYear() + 1);
       const endDateStr = endDate.toISOString().split('T')[0];
-
-      // Compose user preferences summary for prompt
-      const availableBlocksText = getAvailableTimeBlocks(userPreferences);
 
       // Group tasks by category
       const tasksByCategory = tasks.reduce((acc, task) => {
@@ -37,14 +38,13 @@ export const lifeAdminService = {
       for (const [category, categoryTasks] of Object.entries(tasksByCategory)) {
         console.log(`Scheduling tasks for category: ${category}`);
         
-        const prompt = `
+        const prompt = getPromptWithPreferences(`
         Schedule the following life admin tasks into a calendar:
         ${categoryTasks.map(task => `
           - ${task.title}
             Category: ${task.category}
             Frequency: ${task.frequency}
         `).join('\n')}
-        ${availableBlocksText}
         For each task, create a recurring calendar event with the following rules:
         - Daily tasks: Repeat every day (interval: 1)
         - Weekly tasks: Repeat every week (interval: 1)
@@ -73,7 +73,7 @@ export const lifeAdminService = {
         Do not schedule tasks during work/study or sleep hours.
 
         Return ONLY a JSON array of these task objects.
-        `;
+        `, userPreferences);
 
         console.log('Sending scheduling prompt for category:', category);
         const response = await makeOpenAIRequest(prompt);
@@ -81,11 +81,9 @@ export const lifeAdminService = {
 
         let scheduledTasks;
         try {
-          const parsedResponse = JSON.parse(response);
+          const parsedResponse = parseOpenAIResponse(response);
           scheduledTasks = Array.isArray(parsedResponse) ? parsedResponse : parsedResponse.tasks;
-          if (!scheduledTasks || !Array.isArray(scheduledTasks)) {
-            throw new Error('Invalid tasks format');
-          }
+          scheduledTasks = validateTaskArray(scheduledTasks, 'tasks');
 
           // Validate and fix recurrence settings
           scheduledTasks = scheduledTasks.map((task: any) => {
@@ -146,26 +144,26 @@ async function makeOpenAIRequest(prompt: string): Promise<string> {
   console.log('Making OpenAI request with prompt:', prompt);
   
   const response = await axios.post(
-    `${OPENAI_CONFIG.endpoint}/openai/deployments/${OPENAI_CONFIG.deployment}/chat/completions?api-version=2024-02-15-preview`,
+    `${ENDPOINT}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview`,
     {
       messages: [
         {
           role: "system",
-          content: "You are an AI assistant helping to schedule recurring life admin tasks. Provide clear, specific, and well-reasoned responses. Always return valid JSON."
+          content: "You are an AI assistant helping to break down life goals into actionable tasks. Provide clear, specific, and well-reasoned responses. Always return valid JSON."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      max_tokens: OPENAI_CONFIG.maxTokens,
-      temperature: OPENAI_CONFIG.temperature,
+      max_tokens: 2000,
+      temperature: 0.7,
       response_format: { type: "json_object" }
     },
     {
       headers: {
         'Content-Type': 'application/json',
-        'api-key': OPENAI_CONFIG.apiKey
+        'api-key': API_KEY
       }
     }
   );

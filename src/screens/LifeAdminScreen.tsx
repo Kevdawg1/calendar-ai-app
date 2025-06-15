@@ -23,8 +23,6 @@ import { LifeAdminTaskItem } from '../components/LifeAdminTaskItem';
 import { CategorySection } from '../components/CategorySection';
 import { FrequencyModal } from '../components/FrequencyModal';
 import { userPreferencesService, UserPreferences } from '../services/userPreferencesService';
-import { commonStyles as sharedCommonStyles, colors, spacing } from '../styles/common';
-import { Task } from '../types';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -34,10 +32,10 @@ export const LifeAdminScreen = () => {
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [editingTask, setEditingTask] = useState<LifeAdminTask | null>(null);
   const [showFrequencyModal, setShowFrequencyModal] = useState(false);
-  const [tasks, setTasks] = useState<LifeAdminTask[]>([]);
-  const [scheduledTasks, setScheduledTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [userPreferences, setUserPreferences] = useState<UserPreferences | undefined>();
+  const [tasks, setTasks] = useState<LifeAdminTask[]>(lifeAdminTasks);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState<string>('');
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
 
   useEffect(() => {
     navigation.setOptions({
@@ -55,8 +53,8 @@ export const LifeAdminScreen = () => {
 
   const loadUserPreferences = async () => {
     try {
-      const prefs = await userPreferencesService.getPreferences();
-      setUserPreferences(prefs || undefined);
+      const preferences = await userPreferencesService.getPreferences();
+      setUserPreferences(preferences);
     } catch (error) {
       console.error('Error loading user preferences:', error);
     }
@@ -110,46 +108,121 @@ export const LifeAdminScreen = () => {
   };
 
   const handleScheduleTasks = async () => {
+    const selectedTaskIds = Array.from(selectedTasks);
+    if (selectedTaskIds.length === 0) {
+      Alert.alert('No Tasks Selected', 'Please select at least one task to schedule.');
+      return;
+    }
+    
+    const selectedTasksList = tasks.filter(task => selectedTaskIds.includes(task.id));
+    
     try {
-      setLoading(true);
-      const scheduled = await lifeAdminService.scheduleTasks(tasks, userPreferences);
-      setScheduledTasks(scheduled);
-      Alert.alert('Success', 'Tasks have been scheduled successfully!');
+      setIsLoading(true);
+      setLoadingStage('Analyzing Tasks...');
+      Alert.alert(
+        'Schedule Tasks',
+        `Scheduling ${selectedTasksList.length} tasks...`,
+        [{ text: 'OK' }]
+      );
+
+      setLoadingStage('Generating Schedule...');
+      const scheduledTasks = await lifeAdminService.scheduleTasks(selectedTasksList, userPreferences || undefined);
+      
+      setLoadingStage('Adding to Calendar...');
+      const tasksWithGoalId = scheduledTasks.map(task => ({
+        ...task,
+        goalId: 'life-admin'
+      }));
+      await taskService.addTasks(tasksWithGoalId);
+
+      Alert.alert(
+        'Success',
+        `Successfully scheduled ${scheduledTasks.length} tasks!`,
+        [
+          {
+            text: 'View Calendar',
+            onPress: () => {
+              navigation.navigate('Calendar', { tasks: tasksWithGoalId });
+            }
+          }
+        ]
+      );
     } catch (error) {
       console.error('Error scheduling tasks:', error);
-      Alert.alert('Error', 'Failed to schedule tasks. Please try again.');
+      Alert.alert(
+        'Error',
+        'Failed to schedule tasks. Please try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+      setLoadingStage('');
     }
   };
 
   return (
-    <View style={sharedCommonStyles.screenContainer}>
-      <Text style={sharedCommonStyles.title}>Life Admin Tasks</Text>
-      
-      <ScrollView style={{ flex: 1 }}>
-        {tasks.map((task, index) => (
-          <View key={index} style={sharedCommonStyles.card}>
-            <Text style={sharedCommonStyles.subtitle}>{task.title}</Text>
-            <Text style={{ color: colors.gray[600] }}>Category: {task.category}</Text>
-            <Text style={{ color: colors.gray[600] }}>Frequency: {task.frequency}</Text>
-          </View>
-        ))}
+    <View style={commonStyles.container}>
+      <View style={commonStyles.header}>
+        <Button
+          title="Schedule Life Admin Tasks"
+          onPress={handleScheduleTasks}
+          style={styles.scheduleButton}
+          disabled={isLoading}
+        />
+      </View>
+
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>{loadingStage}</Text>
+        </View>
+      )}
+
+      <ScrollView style={commonStyles.content}>
+        <Section title="">
+          <Text style={commonStyles.description}>
+            Manage your recurring life admin tasks. Select the tasks you want to schedule in your calendar.
+          </Text>
+
+          {categories.map((category) => (
+            <CategorySection
+              key={category}
+              category={category}
+              isExpanded={expandedCategories.has(category)}
+              isAllSelected={tasks
+                .filter(task => task.category === category)
+                .every(task => selectedTasks.has(task.id))}
+              onToggle={toggleCategory}
+              onToggleAll={toggleCategoryAll}
+            >
+              {tasks
+                .filter(task => task.category === category)
+                .map((task) => (
+                  <LifeAdminTaskItem
+                    key={task.id}
+                    task={task}
+                    isSelected={selectedTasks.has(task.id)}
+                    onToggle={toggleTask}
+                    onFrequencyPress={(task) => {
+                      setEditingTask(task);
+                      setShowFrequencyModal(true);
+                    }}
+                  />
+                ))}
+            </CategorySection>
+          ))}
+        </Section>
       </ScrollView>
 
-      <TouchableOpacity
-        style={[sharedCommonStyles.button, { marginTop: spacing.md }]}
-        onPress={handleScheduleTasks}
-        disabled={loading || tasks.length === 0}
-      >
-        {loading ? (
-          <ActivityIndicator color={colors.white} />
-        ) : (
-          <Text style={sharedCommonStyles.buttonText}>
-            Schedule Tasks
-          </Text>
-        )}
-      </TouchableOpacity>
+      <FrequencyModal
+        visible={showFrequencyModal}
+        selectedFrequency={editingTask?.frequency || null}
+        onClose={() => {
+          setShowFrequencyModal(false);
+          setEditingTask(null);
+        }}
+        onSelect={(frequency) => editingTask && handleFrequencySelect(editingTask, frequency)}
+      />
     </View>
   );
 };

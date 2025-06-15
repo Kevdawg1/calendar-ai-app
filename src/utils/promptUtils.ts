@@ -36,10 +36,27 @@ export function getAvailableTimeBlocks(userPreferences?: UserPreferences): strin
   return result;
 }
 
-export const OPENAI_CONFIG = {
-  endpoint: 'https://calendar-ai.openai.azure.com/',
-  apiKey: 'E5iUsb1W3fHZgYHoxYagSAPHqEe9l9hInO1wJYnD2Th4JOhCPaCiJQQJ99BFACL93NaXJ3w3AAAAACOGKXdj',
-  deployment: 'gpt-35-turbo',
-  maxTokens: 2000,
-  temperature: 0.7
-}; 
+export function getPromptWithPreferences(
+  basePrompt: string,
+  userPreferences?: UserPreferences
+): string {
+  const availableBlocksText = userPreferences ? '\n' + getAvailableTimeBlocks(userPreferences) + '\n' : '';
+  return `${basePrompt}${availableBlocksText}`;
+}
+
+export function parseOpenAIResponse(response: string): any {
+  try {
+    const parsedResponse = JSON.parse(response);
+    return parsedResponse;
+  } catch (error) {
+    console.error('Error parsing OpenAI response:', error);
+    throw new Error('Failed to parse OpenAI response');
+  }
+}
+
+export function validateTaskArray(tasks: any[], context: string): any[] {
+  if (!tasks || !Array.isArray(tasks)) {
+    throw new Error(`Invalid ${context} format`);
+  }
+  return tasks;
+} 
