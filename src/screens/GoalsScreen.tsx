@@ -165,7 +165,7 @@ export const GoalsScreen = () => {
           updatedAt: task.updatedAt,
           color: goal.color,
         }));
-        navigation.navigate('Calendar', { tasks: calendarTasks });
+        navigation.navigate('TaskReview', { tasks: calendarTasks });
       }
     } catch (error) {
       console.error('Error generating tasks:', error);

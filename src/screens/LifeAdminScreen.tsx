@@ -151,24 +151,12 @@ export const LifeAdminScreen = () => {
         ...task,
         goalId: 'life-admin'
       }));
-      await taskService.addTasks(tasksWithGoalId);
 
       // Clear checked tasks after successful scheduling
       await checkedTasksService.clearCheckedTasks();
       setSelectedTasks(new Set());
 
-      Alert.alert(
-        'Success',
-        `Successfully scheduled ${scheduledTasks.length} tasks!`,
-        [
-          {
-            text: 'View Calendar',
-            onPress: () => {
-              navigation.navigate('Calendar', { tasks: tasksWithGoalId });
-            }
-          }
-        ]
-      );
+      navigation.navigate('TaskReview', { tasks: tasksWithGoalId });
     } catch (error) {
       console.error('Error scheduling tasks:', error);
       Alert.alert(

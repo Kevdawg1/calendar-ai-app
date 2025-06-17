@@ -6,6 +6,7 @@ import { GoalsScreen } from '../screens/GoalsScreen';
 import TaskEditScreen from '../screens/TaskEditScreen';
 import { LifeAdminScreen } from '../screens/LifeAdminScreen';
 import { SurveyScreen } from '../screens/SurveyScreen';
+import { TaskReviewScreen } from '../screens/TaskReviewScreen';
 import { theme } from '../theme';
 import { Task } from '../types';
 import { LifeAdminTask } from '../data/lifeAdminTasks';
@@ -22,6 +23,7 @@ export type RootStackParamList = {
   };
   LifeAdmin: undefined;
   Survey: undefined;
+  TaskReview: { tasks: Task[] };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -101,6 +103,17 @@ export const AppNavigator = () => {
         component={LifeAdminScreen}
         options={{
           title: 'Life Admin',
+        }}
+      />
+      <Stack.Screen
+        name="TaskReview"
+        component={TaskReviewScreen}
+        options={{
+          title: 'Review Tasks',
+          headerStyle: {
+            backgroundColor: theme.colors.primary,
+          },
+          headerTintColor: '#fff',
         }}
       />
     </Stack.Navigator>
