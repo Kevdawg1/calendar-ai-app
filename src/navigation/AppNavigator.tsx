@@ -3,7 +3,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import HomeScreen from '../screens/HomeScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import { GoalsScreen } from '../screens/GoalsScreen';
-import TaskEditScreen from '../screens/TaskEditScreen';
 import { LifeAdminScreen } from '../screens/LifeAdminScreen';
 import { SurveyScreen } from '../screens/SurveyScreen';
 import { TaskReviewScreen } from '../screens/TaskReviewScreen';
@@ -18,9 +17,6 @@ export type RootStackParamList = {
     tasks?: (Task | LifeAdminTask)[];
   };
   Goals: undefined;
-  TaskEdit: {
-    taskId?: string;
-  };
   LifeAdmin: undefined;
   Survey: undefined;
   TaskReview: { tasks: Task[] };
@@ -89,13 +85,6 @@ export const AppNavigator = () => {
         component={GoalsScreen}
         options={{
           title: 'Goals',
-        }}
-      />
-      <Stack.Screen
-        name="TaskEdit"
-        component={TaskEditScreen}
-        options={{
-          title: 'Edit Task',
         }}
       />
       <Stack.Screen
