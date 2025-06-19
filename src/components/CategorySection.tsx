@@ -43,6 +43,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
             name={isExpanded ? 'chevron-up' : 'chevron-down'}
             size={20}
             color={theme.colors.text.primary}
+            style={{ paddingRight: theme.spacing.md }}
           />
         </View>
       </TouchableOpacity>

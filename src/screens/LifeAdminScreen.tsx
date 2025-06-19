@@ -137,11 +137,6 @@ export const LifeAdminScreen = () => {
     try {
       setIsLoading(true);
       setLoadingStage('Analyzing Tasks...');
-      Alert.alert(
-        'Schedule Tasks',
-        `Scheduling ${selectedTasksList.length} tasks...`,
-        [{ text: 'OK' }]
-      );
 
       setLoadingStage('Generating Schedule...');
       const scheduledTasks = await lifeAdminService.scheduleTasks(selectedTasksList, userPreferences || undefined);

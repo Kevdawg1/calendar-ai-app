@@ -65,19 +65,32 @@ export const TaskReviewScreen = () => {
   };
 
   const handleRemoveTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
     Alert.alert(
-      'Remove Task',
-      'Are you sure you want to remove this task?',
+      'Delete Task',
+      'Do you want to delete this task?',
       [
-        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Remove',
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete All Future',
           style: 'destructive',
           onPress: () => {
             setTasks(tasks.filter(t => t.id !== taskId));
           },
         },
-      ]
+        {
+          text: 'Delete Only This',
+          onPress: () => {
+            setTasks(tasks.filter(t => t.id !== taskId));
+          },
+        },
+      ],
+      { cancelable: true }
     );
   };
 

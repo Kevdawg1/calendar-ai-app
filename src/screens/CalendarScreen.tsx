@@ -26,10 +26,14 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   const [tasks, setTasks] = useState<Task[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [calendarKey, setCalendarKey] = useState(0);
   const [isAddTaskModalVisible, setIsAddTaskModalVisible] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | undefined>();
   const [isEditing, setIsEditing] = useState(false);
   const [updateAll, setUpdateAll] = useState(false);
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const calendarRef = React.useRef<any>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -429,9 +433,19 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     setSelectedDate(day.dateString);
   };
 
+  const handleMonthChange = (month: any) => {
+    setCurrentMonth(format(new Date(month.timestamp), 'yyyy-MM-dd'));
+  };
+
   const handleTodayPress = () => {
     const today = format(new Date(), 'yyyy-MM-dd');
     setSelectedDate(today);
+    setCurrentMonth(today);
+    setCalendarKey(prev => prev + 1); // Force calendar re-render
+    // Scroll to today's tasks
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: true });
+    }
   };
 
   useEffect(() => {
@@ -456,7 +470,9 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         </TouchableOpacity>
       </View>
       <Calendar
-        current={selectedDate}
+        key={calendarKey}
+        current={currentMonth}
+        onMonthChange={handleMonthChange}
         onDayPress={handleDayPress}
         markedDates={getMarkedDates(tasks)}
         markingType="multi-dot"
@@ -473,6 +489,7 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
             borderRadius: 4,
             marginTop: 2,
           },
+          // @ts-ignore
           'stylesheet.calendar.main': {
             container: {
               paddingLeft: 5,
@@ -497,6 +514,7 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
               color: theme.colors.primary,
             },
           },
+          // @ts-ignore
           'stylesheet.calendar.header': {
             dayTextAtIndex0: {
               color: theme.colors.primary,
@@ -505,7 +523,11 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         }}
       />
 
-      <ScrollView style={sharedStyles.content} contentContainerStyle={{ flexGrow: 1 }}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={sharedStyles.content} 
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
         <View style={sharedStyles.header}>
           <Text style={sharedStyles.header}>
             {format(parseISO(selectedDate), 'EEEE, MMMM d, yyyy')}

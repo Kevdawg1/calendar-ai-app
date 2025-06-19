@@ -36,7 +36,6 @@ export const LifeAdminTaskItem: React.FC<LifeAdminTaskItemProps> = ({
           <TouchableOpacity onPress={() => onFrequencyPress(task)}>
             <Badge
               label={task.frequency}
-              color={task.frequency === 'daily' ? theme.colors.primary : theme.colors.secondary}
             />
           </TouchableOpacity>
         </View>

@@ -1,30 +1,46 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../theme';
 
-export interface BadgeProps {
+interface BadgeProps {
   label: string;
   color?: string;
-  style?: ViewStyle;
 }
 
-export const Badge: React.FC<BadgeProps> = ({ label, color = theme.colors.primary, style }) => {
+export const Badge: React.FC<BadgeProps> = ({ label }) => {
+  const getFrequencyColor = (frequency: string) => {
+    switch (frequency.toLowerCase()) {
+      case 'daily':
+        return '#007AFF'; // Blue
+      case 'weekly':
+        return '#34C759'; // Green
+      case 'monthly':
+        return '#FF9500'; // Orange
+      case 'seasonal':
+        return '#AF52DE'; // Purple
+      default:
+        return theme.colors.primary;
+    }
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: color }, style]}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={[styles.badge, { backgroundColor: getFrequencyColor(label) }]}>
+      <Text style={styles.text}>{label}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.full,
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginTop: 4,
   },
-  label: {
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.white,
-    fontWeight: theme.typography.weights.medium,
+  text: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 }); 
