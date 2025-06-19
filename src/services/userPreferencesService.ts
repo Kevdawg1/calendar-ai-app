@@ -15,9 +15,23 @@ export interface UserPreferences {
 const PREFERENCES_STORAGE_KEY = '@user_preferences';
 const SURVEY_COMPLETED_KEY = '@survey_completed';
 
+// Helper function to ensure AsyncStorage is ready
+const ensureAsyncStorageReady = async (): Promise<void> => {
+  try {
+    // Test AsyncStorage with a simple operation
+    await AsyncStorage.setItem('@test_key', 'test_value');
+    await AsyncStorage.removeItem('@test_key');
+  } catch (error) {
+    console.warn('AsyncStorage not ready, waiting...');
+    // Wait a bit and try again
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+};
+
 export const userPreferencesService = {
   async savePreferences(preferences: UserPreferences): Promise<void> {
     try {
+      await ensureAsyncStorageReady();
       const serializedPreferences = JSON.stringify(preferences, (key, value) => {
         if (value instanceof Date) {
           return value.toISOString();
@@ -34,6 +48,7 @@ export const userPreferencesService = {
 
   async getPreferences(): Promise<UserPreferences | null> {
     try {
+      await ensureAsyncStorageReady();
       const serializedPreferences = await AsyncStorage.getItem(PREFERENCES_STORAGE_KEY);
       if (!serializedPreferences) {
         return null;
@@ -55,6 +70,7 @@ export const userPreferencesService = {
 
   async isSurveyCompleted(): Promise<boolean> {
     try {
+      await ensureAsyncStorageReady();
       const surveyCompleted = await AsyncStorage.getItem(SURVEY_COMPLETED_KEY);
       return surveyCompleted === 'true';
     } catch (error) {
@@ -65,6 +81,7 @@ export const userPreferencesService = {
 
   async clearPreferences(): Promise<void> {
     try {
+      await ensureAsyncStorageReady();
       await AsyncStorage.removeItem(PREFERENCES_STORAGE_KEY);
       await AsyncStorage.removeItem(SURVEY_COMPLETED_KEY);
     } catch (error) {

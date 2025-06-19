@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { View, ActivityIndicator } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import { GoalsScreen } from '../screens/GoalsScreen';
@@ -26,23 +27,44 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 export const AppNavigator = () => {
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  console.log('AppNavigator component initializing...');
 
   useEffect(() => {
+    console.log('AppNavigator useEffect running...');
     const checkSurveyStatus = async () => {
       try {
+        console.log('Starting survey status check...');
+        setIsLoading(true);
+        // Add a small delay to ensure AsyncStorage is properly initialized
+        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log('Checking if survey is completed...');
         const surveyCompleted = await userPreferencesService.isSurveyCompleted();
+        console.log('Survey completed:', surveyCompleted);
         setInitialRoute(surveyCompleted ? 'Home' : 'Survey');
       } catch (error) {
         console.error('Error checking survey status:', error);
+        // Default to Survey screen on error
         setInitialRoute('Survey');
+      } finally {
+        console.log('Survey status check completed');
+        setIsLoading(false);
       }
     };
 
     checkSurveyStatus();
   }, []);
 
-  if (!initialRoute) {
-    return null; // Or a loading screen
+  console.log('AppNavigator render - isLoading:', isLoading, 'initialRoute:', initialRoute);
+
+  if (isLoading || !initialRoute) {
+    console.log('Showing loading screen...');
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
   }
 
   return (

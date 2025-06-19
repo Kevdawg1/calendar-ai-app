@@ -8,9 +8,23 @@ const TASKS_STORAGE_KEY = '@calendar_ai_tasks';
 let tasks: Task[] = [];
 let isInitialized = false;
 
+// Helper function to ensure AsyncStorage is ready
+const ensureAsyncStorageReady = async (): Promise<void> => {
+  try {
+    // Test AsyncStorage with a simple operation
+    await AsyncStorage.setItem('@test_key', 'test_value');
+    await AsyncStorage.removeItem('@test_key');
+  } catch (error) {
+    console.warn('AsyncStorage not ready, waiting...');
+    // Wait a bit and try again
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+};
+
 // Load tasks from storage on service initialization
 const loadTasks = async () => {
   try {
+    await ensureAsyncStorageReady();
     const storedTasks = await AsyncStorage.getItem(TASKS_STORAGE_KEY);
     if (storedTasks) {
       tasks = JSON.parse(storedTasks);
@@ -25,6 +39,7 @@ const loadTasks = async () => {
 // Save tasks to storage
 const saveTasks = async () => {
   try {
+    await ensureAsyncStorageReady();
     await AsyncStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
   } catch (error) {
     console.error('Error saving tasks to storage:', error);
