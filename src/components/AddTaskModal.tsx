@@ -302,79 +302,110 @@ export function AddTaskModal({
         </View>
 
         {/* Date/Time Picker Modals */}
-        {showDatePicker && (
-          <Modal
-            visible={showDatePicker}
-            transparent={true}
-            animationType="slide"
-          >
-            <View style={styles.pickerModalContainer}>
-              <View style={styles.pickerModalContent}>
-                <DateTimePicker
-                  value={taskDate}
-                  mode="date"
-                  display="spinner"
-                  onChange={handleDateChange}
-                />
-                <TouchableOpacity
-                  style={styles.pickerButton}
-                  onPress={() => setShowDatePicker(false)}
-                >
-                  <Text style={styles.pickerButtonText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Modal>
-        )}
+        {Platform.OS === 'android' ? (
+          <>
+            {showDatePicker && (
+              <DateTimePicker
+                value={taskDate}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            )}
+            {showStartTimePicker && (
+              <DateTimePicker
+                value={startTime}
+                mode="time"
+                display="default"
+                onChange={handleStartTimeChange}
+              />
+            )}
+            {showEndTimePicker && (
+              <DateTimePicker
+                value={endTime}
+                mode="time"
+                display="default"
+                onChange={handleEndTimeChange}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            {showDatePicker && (
+              <Modal
+                visible={showDatePicker}
+                transparent={true}
+                animationType="slide"
+              >
+                <View style={styles.pickerModalContainer}>
+                  <View style={styles.pickerModalContent}>
+                    <DateTimePicker
+                      value={taskDate}
+                      mode="date"
+                      display="spinner"
+                      onChange={handleDateChange}
+                    />
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => setShowDatePicker(false)}
+                    >
+                      <Text style={styles.pickerButtonText}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+            )}
 
-        {showStartTimePicker && (
-          <Modal
-            visible={showStartTimePicker}
-            transparent={true}
-            animationType="slide"
-          >
-            <View style={styles.pickerModalContainer}>
-              <View style={styles.pickerModalContent}>
-                <DateTimePicker
-                  value={startTime}
-                  mode="time"
-                  display="spinner"
-                  onChange={handleStartTimeChange}
-                />
-                <TouchableOpacity
-                  style={styles.pickerButton}
-                  onPress={() => setShowStartTimePicker(false)}
-                >
-                  <Text style={styles.pickerButtonText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Modal>
-        )}
+            {showStartTimePicker && (
+              <Modal
+                visible={showStartTimePicker}
+                transparent={true}
+                animationType="slide"
+              >
+                <View style={styles.pickerModalContainer}>
+                  <View style={styles.pickerModalContent}>
+                    <DateTimePicker
+                      value={startTime}
+                      mode="time"
+                      display="spinner"
+                      onChange={handleStartTimeChange}
+                    />
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => setShowStartTimePicker(false)}
+                    >
+                      <Text style={styles.pickerButtonText}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+            )}
 
-        {showEndTimePicker && (
-          <Modal
-            visible={showEndTimePicker}
-            transparent={true}
-            animationType="slide"
-          >
-            <View style={styles.pickerModalContainer}>
-              <View style={styles.pickerModalContent}>
-                <DateTimePicker
-                  value={endTime}
-                  mode="time"
-                  display="spinner"
-                  onChange={handleEndTimeChange}
-                />
-                <TouchableOpacity
-                  style={styles.pickerButton}
-                  onPress={() => setShowEndTimePicker(false)}
-                >
-                  <Text style={styles.pickerButtonText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Modal>
+            {showEndTimePicker && (
+              <Modal
+                visible={showEndTimePicker}
+                transparent={true}
+                animationType="slide"
+              >
+                <View style={styles.pickerModalContainer}>
+                  <View style={styles.pickerModalContent}>
+                    <DateTimePicker
+                      value={endTime}
+                      mode="time"
+                      display="spinner"
+                      onChange={handleEndTimeChange}
+                    />
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => setShowEndTimePicker(false)}
+                    >
+                      <Text style={styles.pickerButtonText}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+            )}
+          </>
         )}
       </View>
     </Modal>

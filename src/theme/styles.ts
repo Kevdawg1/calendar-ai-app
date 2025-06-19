@@ -256,19 +256,21 @@ export const sharedStyles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   typeButton: {
-    width: 110,
-    padding: theme.spacing.sm,
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs,
     borderWidth: 1,
     borderColor: theme.colors.primary,
-    marginHorizontal: theme.spacing.xs,
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
+    minWidth: 90,
   },
   selectedType: {
     backgroundColor: theme.colors.primary,
   },
   typeText: {
     color: theme.colors.primary,
+    fontSize: theme.typography.sizes.sm,
     textAlign: 'center',
   },
   selectedTypeText: {
@@ -280,19 +282,21 @@ export const sharedStyles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   priorityButton: {
-    width: 110,
-    padding: theme.spacing.sm,
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs,
     borderWidth: 1,
     borderColor: theme.colors.primary,
-    marginHorizontal: theme.spacing.xs,
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
+    minWidth: 70,
   },
   selectedPriority: {
     backgroundColor: theme.colors.primary,
   },
   priorityText: {
     color: theme.colors.primary,
+    fontSize: theme.typography.sizes.sm,
     textAlign: 'center',
   },
   selectedPriorityText: {
@@ -431,6 +435,7 @@ export const sharedStyles = StyleSheet.create({
     paddingTop: theme.spacing.md,
   },
   workDaySummary: {
+    marginTop: theme.spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: theme.spacing.sm,
@@ -508,8 +513,20 @@ export const sharedStyles = StyleSheet.create({
   },
   typeContainerRow: {
     flexDirection: 'row',
-    flexWrap: 'nowrap',
     justifyContent: 'space-between',
-    gap: 8,
+    width: '100%',
+    gap: theme.spacing.sm,
+  },
+  timePickerButton: {
+    backgroundColor: '#f0f0f0',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 8,
+    alignItems: 'center',
+  },
+  timePickerButtonText: {
+    fontSize: 18,
+    color: '#000000',
+    fontWeight: '500',
   },
 }); 

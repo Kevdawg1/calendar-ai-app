@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert, Platform, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -30,7 +30,16 @@ export const SurveyScreen = () => {
   const [workStartTime, setWorkStartTime] = useState(new Date(2024, 0, 1, 9, 0));
   const [workEndTime, setWorkEndTime] = useState(new Date(2024, 0, 1, 17, 0));
 
+  // State for showing/hiding time pickers on Android
+  const [showWakeUpPicker, setShowWakeUpPicker] = useState(Platform.OS === 'ios');
+  const [showSleepPicker, setShowSleepPicker] = useState(Platform.OS === 'ios');
+  const [showWorkStartPicker, setShowWorkStartPicker] = useState(Platform.OS === 'ios');
+  const [showWorkEndPicker, setShowWorkEndPicker] = useState(Platform.OS === 'ios');
+
   const handleWakeUpTimeChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowWakeUpPicker(false);
+    }
     if (selectedDate) {
       setSurveyData(prev => ({
         ...prev,
@@ -40,6 +49,9 @@ export const SurveyScreen = () => {
   };
 
   const handleSleepTimeChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowSleepPicker(false);
+    }
     if (selectedDate) {
       setSurveyData(prev => ({
         ...prev,
@@ -48,18 +60,21 @@ export const SurveyScreen = () => {
     }
   };
 
-  const handleWorkScheduleChange = (day: string, type: 'startTime' | 'endTime', date?: Date) => {
-    if (date) {
-      setSurveyData(prev => ({
-        ...prev,
-        workSchedule: {
-          ...prev.workSchedule,
-          [day]: {
-            ...prev.workSchedule[day],
-            [type]: date,
-          },
-        },
-      }));
+  const handleWorkStartTimeChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowWorkStartPicker(false);
+    }
+    if (selectedDate) {
+      setWorkStartTime(selectedDate);
+    }
+  };
+
+  const handleWorkEndTimeChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowWorkEndPicker(false);
+    }
+    if (selectedDate) {
+      setWorkEndTime(selectedDate);
     }
   };
 
@@ -114,29 +129,69 @@ export const SurveyScreen = () => {
           </Text>
           <View style={sharedStyles.questionContainer}>
             <Text style={sharedStyles.question}>What time do you wish to wake up by?</Text>
-            <View style={sharedStyles.pickerRow}>
+            {Platform.OS === 'android' ? (
+              <TouchableOpacity 
+                onPress={() => setShowWakeUpPicker(true)}
+                style={sharedStyles.timePickerButton}
+              >
+                <Text style={sharedStyles.timePickerButtonText}>
+                  {format(surveyData.wakeUpTime, 'h:mm a')}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={sharedStyles.pickerRow}>
+                <DateTimePicker
+                  value={surveyData.wakeUpTime}
+                  mode="time"
+                  is24Hour={false}
+                  display="spinner"
+                  onChange={handleWakeUpTimeChange}
+                  style={sharedStyles.timePicker}
+                />
+              </View>
+            )}
+            {Platform.OS === 'android' && showWakeUpPicker && (
               <DateTimePicker
                 value={surveyData.wakeUpTime}
                 mode="time"
                 is24Hour={false}
-                display="spinner"
+                display="default"
                 onChange={handleWakeUpTimeChange}
-                style={sharedStyles.timePicker}
               />
-            </View>
+            )}
           </View>
           <View style={sharedStyles.questionContainer}>
             <Text style={sharedStyles.question}>What time do you wish to go to sleep?</Text>
-            <View style={sharedStyles.pickerRow}>
+            {Platform.OS === 'android' ? (
+              <TouchableOpacity 
+                onPress={() => setShowSleepPicker(true)}
+                style={sharedStyles.timePickerButton}
+              >
+                <Text style={sharedStyles.timePickerButtonText}>
+                  {format(surveyData.sleepTime, 'h:mm a')}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={sharedStyles.pickerRow}>
+                <DateTimePicker
+                  value={surveyData.sleepTime}
+                  mode="time"
+                  is24Hour={false}
+                  display="spinner"
+                  onChange={handleSleepTimeChange}
+                  style={sharedStyles.timePicker}
+                />
+              </View>
+            )}
+            {Platform.OS === 'android' && showSleepPicker && (
               <DateTimePicker
                 value={surveyData.sleepTime}
                 mode="time"
                 is24Hour={false}
-                display="spinner"
+                display="default"
                 onChange={handleSleepTimeChange}
-                style={sharedStyles.timePicker}
               />
-            </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -190,29 +245,69 @@ export const SurveyScreen = () => {
           </View>
           <View style={sharedStyles.questionContainer}>
             <Text style={sharedStyles.question}>Start Time</Text>
-            <View style={sharedStyles.pickerRow}>
+            {Platform.OS === 'android' ? (
+              <TouchableOpacity 
+                onPress={() => setShowWorkStartPicker(true)}
+                style={sharedStyles.timePickerButton}
+              >
+                <Text style={sharedStyles.timePickerButtonText}>
+                  {format(workStartTime, 'h:mm a')}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={sharedStyles.pickerRow}>
+                <DateTimePicker
+                  value={workStartTime}
+                  mode="time"
+                  is24Hour={false}
+                  display="spinner"
+                  onChange={handleWorkStartTimeChange}
+                  style={sharedStyles.timePicker}
+                />
+              </View>
+            )}
+            {Platform.OS === 'android' && showWorkStartPicker && (
               <DateTimePicker
                 value={workStartTime}
                 mode="time"
                 is24Hour={false}
-                display="spinner"
-                onChange={(event, date) => date && setWorkStartTime(date)}
-                style={sharedStyles.timePicker}
+                display="default"
+                onChange={handleWorkStartTimeChange}
               />
-            </View>
+            )}
           </View>
           <View style={sharedStyles.questionContainer}>
             <Text style={sharedStyles.question}>End Time</Text>
-            <View style={sharedStyles.pickerRow}>
+            {Platform.OS === 'android' ? (
+              <TouchableOpacity 
+                onPress={() => setShowWorkEndPicker(true)}
+                style={sharedStyles.timePickerButton}
+              >
+                <Text style={sharedStyles.timePickerButtonText}>
+                  {format(workEndTime, 'h:mm a')}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={sharedStyles.pickerRow}>
+                <DateTimePicker
+                  value={workEndTime}
+                  mode="time"
+                  is24Hour={false}
+                  display="spinner"
+                  onChange={handleWorkEndTimeChange}
+                  style={sharedStyles.timePicker}
+                />
+              </View>
+            )}
+            {Platform.OS === 'android' && showWorkEndPicker && (
               <DateTimePicker
                 value={workEndTime}
                 mode="time"
                 is24Hour={false}
-                display="spinner"
-                onChange={(event, date) => date && setWorkEndTime(date)}
-                style={sharedStyles.timePicker}
+                display="default"
+                onChange={handleWorkEndTimeChange}
               />
-            </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -279,7 +374,6 @@ export const SurveyScreen = () => {
           <Button
             title="Back"
             onPress={handleBack}
-            variant="secondary"
             style={sharedStyles.button}
           />
         )}
