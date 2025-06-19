@@ -10,7 +10,7 @@ export const sharedStyles = StyleSheet.create({
   header: {
     fontSize: theme.typography.sizes.xxl,
     fontWeight: theme.typography.weights.bold,
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
     color: theme.colors.text.primary,
   },
   subheader: {
@@ -95,7 +95,7 @@ export const sharedStyles = StyleSheet.create({
     fontSize: theme.typography.sizes.md,
     color: theme.colors.text.secondary,
     textAlign: 'center',
-    marginTop: theme.spacing.md,
+    // marginTop: theme.spacing.md,
   },
   list: {
     flex: 1,
