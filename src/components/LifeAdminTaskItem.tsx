@@ -10,6 +10,7 @@ import { LifeAdminTask } from '../data/lifeAdminTasks';
 interface LifeAdminTaskItemProps {
   task: LifeAdminTask;
   isSelected: boolean;
+  isScheduled: boolean;
   onToggle: (taskId: string) => void;
   onFrequencyPress: (task: LifeAdminTask) => void;
 }
@@ -17,6 +18,7 @@ interface LifeAdminTaskItemProps {
 export const LifeAdminTaskItem: React.FC<LifeAdminTaskItemProps> = ({
   task,
   isSelected,
+  isScheduled,
   onToggle,
   onFrequencyPress,
 }) => {
@@ -27,13 +29,22 @@ export const LifeAdminTaskItem: React.FC<LifeAdminTaskItemProps> = ({
     ]}>
       <View style={sharedStyles.cardContentRow}>
         <Checkbox
-          value={isSelected}
+          value={isSelected || isScheduled}
           onValueChange={() => onToggle(task.id)}
-          color={isSelected ? theme.colors.primary : undefined}
+          color={isSelected || isScheduled ? theme.colors.primary : undefined}
+          disabled={isScheduled}
         />
         <View style={styles.taskInfo}>
-          <Text style={sharedStyles.cardText}>{task.title}</Text>
-          <TouchableOpacity onPress={() => onFrequencyPress(task)}>
+          <Text style={[
+            sharedStyles.cardText,
+            isScheduled && styles.scheduledText
+          ]}>
+            {task.title}
+          </Text>
+          <TouchableOpacity 
+            onPress={() => onFrequencyPress(task)}
+            disabled={isScheduled}
+          >
             <Badge
               label={task.frequency}
             />
@@ -48,5 +59,8 @@ const styles = StyleSheet.create({
   taskInfo: {
     flex: 1,
     marginLeft: theme.spacing.sm,
+  },
+  scheduledText: {
+    color: theme.colors.text.secondary,
   },
 }); 

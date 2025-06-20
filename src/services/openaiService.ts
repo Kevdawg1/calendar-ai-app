@@ -104,12 +104,15 @@ export const openaiService = {
       ${JSON.stringify(subtasksByComponent, null, 2)}
       Current date: ${currentDate.toISOString().split('T')[0]}
       For each task, provide a JSON object with:
-      - title: string (from subtask)
-      - description: string (from subtask)
-      - duration: number (from estimatedDuration)
-      - startDate: string (YYYY-MM-DD, must be after current date)
-      - startTime: string (HH:MM)
+      - title: string (clear, actionable task name)
+      - description: string (brief explanation of what needs to be done)
+      - startDate: string (YYYY-MM-DD, use ${taskPeriodStart.toISOString().split('T')[0]})
+      - startTime: string (HH:MM, suggest appropriate time based on task type)
       - endTime: string (HH:MM)
+      - recurrence: object (if task should repeat)
+        - frequency: string (daily/weekly/monthly/seasonal)
+        - interval: number (1 for daily/weekly/monthly, 3 for seasonal)
+        - endDate: string (YYYY-MM-DD, use ${taskPeriodEnd.toISOString().split('T')[0]})
       - goalId: string (${goals[0].id})
       Consider:
       - Spread tasks across available time

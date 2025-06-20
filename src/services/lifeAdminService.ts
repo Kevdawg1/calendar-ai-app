@@ -5,6 +5,7 @@ import { generateUUID } from '../utils/uuid';
 import { UserPreferences } from './userPreferencesService';
 import { getPromptWithPreferences, parseOpenAIResponse, validateTaskArray } from '../utils/promptUtils';
 import { openaiConfig } from '../config/openai';
+import { taskService } from './taskService';
 
 export const lifeAdminService = {
   scheduleTasks: async (tasks: LifeAdminTask[], userPreferences?: UserPreferences): Promise<Task[]> => {
@@ -19,6 +20,10 @@ export const lifeAdminService = {
       const endDate = new Date();
       endDate.setFullYear(endDate.getFullYear() + 1);
       const endDateStr = endDate.toISOString().split('T')[0];
+
+      // Get existing tasks to check for duplicates
+      const existingTasks = await taskService.getAllTasks();
+      const existingLifeAdminTasks = existingTasks.filter(task => task.goalId === 'life-admin');
 
       // Group tasks by category
       const tasksByCategory = tasks.reduce((acc, task) => {
@@ -51,7 +56,6 @@ export const lifeAdminService = {
         For each task, provide a JSON object with:
         - title: string (from task)
         - description: string (include category and frequency)
-        - duration: number (in minutes, estimate based on task type)
         - startDate: string (YYYY-MM-DD, use ${startDate})
         - startTime: string (HH:MM, suggest appropriate time based on task type)
         - endTime: string (HH:MM)
@@ -112,14 +116,26 @@ export const lifeAdminService = {
           throw new Error(`Failed to parse scheduled tasks response for category: ${category}`);
         }
 
-        // Add metadata to tasks
-        const tasksWithMetadata = scheduledTasks.map((task: any) => ({
-          ...task,
-          id: generateUUID(),
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }));
+        // Filter out duplicates and add metadata to tasks
+        const tasksWithMetadata = scheduledTasks
+          .filter((task: any) => {
+            // Check if a task with the same title and goalId already exists
+            const isDuplicate = existingLifeAdminTasks.some(existingTask => 
+              existingTask.title === task.title && existingTask.goalId === 'life-admin'
+            );
+            if (isDuplicate) {
+              console.log(`Skipping duplicate task: ${task.title}`);
+            }
+            return !isDuplicate;
+          })
+          .map((task: any) => ({
+            ...task,
+            id: generateUUID(),
+            goalId: 'life-admin',
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }));
 
         allScheduledTasks.push(...tasksWithMetadata);
       }

@@ -101,17 +101,28 @@ export const taskService = {
     if (!isInitialized) {
       await loadTasks();
     }
-    // Only add tasks that do not already exist (by title, startDate, and startTime)
-    const uniqueNewTasks = newTasks.filter(newTask =>
-      !tasks.some(existingTask =>
+    
+    // Filter out duplicates based on different criteria for different task types
+    const uniqueNewTasks = newTasks.filter(newTask => {
+      // For life admin tasks, check by title and goalId
+      if (newTask.goalId === 'life-admin') {
+        return !tasks.some(existingTask =>
+          existingTask.title === newTask.title &&
+          existingTask.goalId === 'life-admin'
+        );
+      }
+      
+      // For other tasks, check by title, startDate, and startTime
+      return !tasks.some(existingTask =>
         existingTask.title === newTask.title &&
         existingTask.startDate === newTask.startDate &&
         existingTask.startTime === newTask.startTime
-      )
-    );
-    const tasksWithIds = newTasks.map(task => ({
+      );
+    });
+    
+    const tasksWithIds = uniqueNewTasks.map(task => ({
       ...task,
-      id: generateUUID(),
+      id: task.id || generateUUID(), // Use existing ID if provided, otherwise generate new one
       status: 'pending' as const,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -163,5 +174,49 @@ export const taskService = {
     tasks = updatedTasks;
     await saveTasks();
     return updatedTasks;
-  }
+  },
+
+  clearAllTasks: async (): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(TASKS_STORAGE_KEY);
+      tasks = []; // Clear tasks in memory
+      isInitialized = true; // Ensure service is marked as initialized
+    } catch (error) {
+      console.error('Error clearing tasks:', error);
+      throw error;
+    }
+  },
+
+  removeDuplicateLifeAdminTasks: async (): Promise<void> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
+    
+    // Group life admin tasks by title
+    const lifeAdminTasks = tasks.filter(task => task.goalId === 'life-admin');
+    const tasksByTitle = lifeAdminTasks.reduce((acc, task) => {
+      if (!acc[task.title]) {
+        acc[task.title] = [];
+      }
+      acc[task.title].push(task);
+      return acc;
+    }, {} as Record<string, Task[]>);
+    
+    // Remove duplicates, keeping only the first occurrence
+    const tasksToRemove: string[] = [];
+    Object.values(tasksByTitle).forEach(taskGroup => {
+      if (taskGroup.length > 1) {
+        // Keep the first task, remove the rest
+        taskGroup.slice(1).forEach(task => {
+          tasksToRemove.push(task.id);
+        });
+      }
+    });
+    
+    // Remove duplicate tasks
+    tasks = tasks.filter(task => !tasksToRemove.includes(task.id));
+    await saveTasks();
+    
+    console.log(`Removed ${tasksToRemove.length} duplicate life admin tasks`);
+  },
 }; 

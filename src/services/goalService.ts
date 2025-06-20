@@ -17,6 +17,8 @@ const ensureAsyncStorageReady = async (): Promise<void> => {
   }
 };
 
+let goals: Goal[] = [];
+
 export const goalService = {
   getAllGoals: async (): Promise<Goal[]> => {
     try {
@@ -85,6 +87,16 @@ export const goalService = {
       await AsyncStorage.setItem(GOALS_KEY, JSON.stringify(updatedGoals));
     } catch (error) {
       console.error('Error deleting goal:', error);
+      throw error;
+    }
+  },
+
+  clearAllGoals: async (): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(GOALS_KEY);
+      goals = []; // Clear goals in memory
+    } catch (error) {
+      console.error('Error clearing goals:', error);
       throw error;
     }
   },

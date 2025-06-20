@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   Alert,
 } from 'react-native';
@@ -107,19 +107,19 @@ export const TaskReviewScreen = () => {
     setEditingTask(null);
   };
 
-  const renderTaskItem = ({ item }: { item: Task }) => (
-    <View style={[sharedStyles.card, { borderLeftWidth: 6, borderLeftColor: item.goalId === 'life-admin' ? theme.colors.primary : goals.find(g => g.id === item.goalId)?.color || theme.colors.primary }]}>
+  const renderTaskItem = (task: Task) => (
+    <View key={task.id} style={[sharedStyles.card, { borderLeftWidth: 6, borderLeftColor: task.goalId === 'life-admin' ? theme.colors.primary : goals.find(g => g.id === task.goalId)?.color || theme.colors.primary }]}>
       <View style={sharedStyles.cardHeader}>
-        <Text style={sharedStyles.cardTitle}>{item.title}</Text>
+        <Text style={sharedStyles.cardTitle}>{task.title}</Text>
         <View style={{ flexDirection: 'row' }}>
           <TouchableOpacity
-            onPress={() => handleEditTask(item)}
+            onPress={() => handleEditTask(task)}
             style={sharedStyles.deleteButton}
           >
             <Ionicons name="create-outline" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => handleRemoveTask(item.id)}
+            onPress={() => handleRemoveTask(task.id)}
             style={sharedStyles.deleteButton}
           >
             <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
@@ -127,17 +127,14 @@ export const TaskReviewScreen = () => {
         </View>
       </View>
       <View style={sharedStyles.cardContent}>
-        {item.description && (
-          <Text style={sharedStyles.cardText}>{item.description}</Text>
+        {task.description && (
+          <Text style={sharedStyles.cardText}>{task.description}</Text>
         )}
         <Text style={sharedStyles.cardText}>
-          Duration: {item.duration} minutes
+          Date: {new Date(task.startDate).toLocaleDateString()}
         </Text>
         <Text style={sharedStyles.cardText}>
-          Date: {new Date(item.startDate).toLocaleDateString()}
-        </Text>
-        <Text style={sharedStyles.cardText}>
-          Time: {item.startTime} - {item.endTime}
+          Time: {task.startTime} - {task.endTime}
         </Text>
       </View>
     </View>
@@ -145,12 +142,18 @@ export const TaskReviewScreen = () => {
 
   return (
     <View style={sharedStyles.container}>
-      <FlatList
-        data={tasks}
-        renderItem={renderTaskItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={sharedStyles.content}
-      />
+      <ScrollView 
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingHorizontal: theme.spacing.md,
+          paddingTop: theme.spacing.md,
+          paddingBottom: theme.spacing.xl,
+        }}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+      >
+        {tasks.map(renderTaskItem)}
+      </ScrollView>
 
       <AddTaskModal
         visible={showAddTaskModal}

@@ -12,7 +12,6 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  duration?: number;
   startDate: string;
   startTime?: string;
   endTime?: string;
@@ -33,7 +32,6 @@ export interface Task {
 export interface TaskUpdate {
   title?: string;
   description?: string;
-  duration?: number;
   startDate?: string;
   startTime?: string;
   endTime?: string;

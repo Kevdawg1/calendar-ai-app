@@ -41,6 +41,15 @@ export const SurveyScreen = () => {
       setShowWakeUpPicker(false);
     }
     if (selectedDate) {
+      // Validate that wake up time is before sleep time
+      if (selectedDate >= surveyData.sleepTime) {
+        Alert.alert(
+          'Invalid Time',
+          'Wake up time must be before sleep time',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
       setSurveyData(prev => ({
         ...prev,
         wakeUpTime: selectedDate,
@@ -53,6 +62,15 @@ export const SurveyScreen = () => {
       setShowSleepPicker(false);
     }
     if (selectedDate) {
+      // Validate that sleep time is after wake up time
+      if (selectedDate <= surveyData.wakeUpTime) {
+        Alert.alert(
+          'Invalid Time',
+          'Sleep time must be after wake up time',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
       setSurveyData(prev => ({
         ...prev,
         sleepTime: selectedDate,
@@ -86,7 +104,16 @@ export const SurveyScreen = () => {
   };
 
   const handleNext = () => {
-    if (currentStep === 3 && surveyData.hasWorkSchedule) {
+    if (currentStep === 1) setCurrentStep(2);
+    else if (currentStep === 2) {
+      if (surveyData.hasWorkSchedule) {
+        setCurrentStep(3);
+      } else {
+        // Skip step 3 and go directly to step 4 if user doesn't work/study
+        setCurrentStep(4);
+      }
+    }
+    else if (currentStep === 3 && surveyData.hasWorkSchedule) {
       // Apply the same start/end time to all selected days
       const newSchedule: any = {};
       selectedDays.forEach(idx => {
@@ -99,14 +126,17 @@ export const SurveyScreen = () => {
       setCurrentStep(4);
       return;
     }
-    if (currentStep === 1) setCurrentStep(2);
-    else if (currentStep === 2) setCurrentStep(3);
     else if (currentStep === 4) handleSubmit();
   };
 
   const handleBack = () => {
     if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
+      if (currentStep === 4 && !surveyData.hasWorkSchedule) {
+        // If user doesn't work/study and we're on step 4, go back to step 2
+        setCurrentStep(2);
+      } else {
+        setCurrentStep(prev => prev - 1);
+      }
     }
   };
 
@@ -340,7 +370,7 @@ export const SurveyScreen = () => {
                 {surveyData.hasWorkSchedule ? 'Yes' : 'No'}
               </Text>
             </View>
-            {surveyData.hasWorkSchedule && (
+            {surveyData.hasWorkSchedule && Object.keys(surveyData.workSchedule).length > 0 && (
               <View style={sharedStyles.workScheduleSummary}>
                 <Text style={sharedStyles.summaryLabel}>Work Hours:</Text>
                 {DAYS_OF_WEEK.map(day => {

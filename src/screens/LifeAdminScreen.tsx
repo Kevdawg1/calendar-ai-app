@@ -30,6 +30,7 @@ export const LifeAdminScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [scheduledTasks, setScheduledTasks] = useState<Set<string>>(new Set());
   const [editingTask, setEditingTask] = useState<LifeAdminTask | null>(null);
   const [showFrequencyModal, setShowFrequencyModal] = useState(false);
   const [tasks, setTasks] = useState<LifeAdminTask[]>(lifeAdminTasks);
@@ -49,7 +50,17 @@ export const LifeAdminScreen = () => {
       ),
     });
     loadUserPreferences();
-    loadCheckedTasks();
+    loadScheduledTasks();
+    
+    // Clean up any existing duplicate life admin tasks
+    const cleanupDuplicates = async () => {
+      try {
+        await taskService.removeDuplicateLifeAdminTasks();
+      } catch (error) {
+        console.error('Error cleaning up duplicate tasks:', error);
+      }
+    };
+    cleanupDuplicates();
   }, [navigation]);
 
   const loadUserPreferences = async () => {
@@ -61,12 +72,34 @@ export const LifeAdminScreen = () => {
     }
   };
 
-  const loadCheckedTasks = async () => {
+  const loadScheduledTasks = async () => {
     try {
+      const allTasks = await taskService.getAllTasks();
+      const lifeAdminTaskIds = new Set(
+        allTasks
+          .filter(task => task.goalId === 'life-admin')
+          .map(task => task.title.split(' [')[0]) // Extract original task title without frequency
+      );
+      setScheduledTasks(lifeAdminTaskIds);
+      
+      // Get checked tasks from AsyncStorage
       const checkedTasks = await checkedTasksService.getCheckedTasks();
-      setSelectedTasks(checkedTasks);
+      
+      // Check which life admin tasks are already in the calendar and mark them as selected
+      const tasksInCalendar = new Set<string>();
+      lifeAdminTaskIds.forEach(taskTitle => {
+        // Find the corresponding life admin task by title
+        const matchingTask = tasks.find(task => task.title === taskTitle);
+        if (matchingTask) {
+          tasksInCalendar.add(matchingTask.id);
+        }
+      });
+      
+      // Combine checked tasks from AsyncStorage and tasks in calendar
+      const allSelectedTasks = new Set([...checkedTasks, ...tasksInCalendar]);
+      setSelectedTasks(allSelectedTasks);
     } catch (error) {
-      console.error('Error loading checked tasks:', error);
+      console.error('Error loading scheduled tasks:', error);
     }
   };
 
@@ -207,6 +240,7 @@ export const LifeAdminScreen = () => {
                     key={task.id}
                     task={task}
                     isSelected={selectedTasks.has(task.id)}
+                    isScheduled={scheduledTasks.has(task.title)}
                     onToggle={toggleTask}
                     onFrequencyPress={(task) => {
                       setEditingTask(task);

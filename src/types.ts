@@ -2,7 +2,6 @@ export type Task = {
   id: string;
   title: string;
   description: string;
-  duration: number;
   startDate: string;
   startTime: string;
   endTime: string;

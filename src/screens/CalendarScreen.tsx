@@ -208,7 +208,6 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   const handleAddTask = async (taskData: {
     title: string;
     description: string;
-    duration: string;
     startTime: string;
     endTime: string;
     goalId: string;
@@ -224,12 +223,6 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
       return;
     }
 
-    const durationNum = parseInt(taskData.duration);
-    if (isNaN(durationNum) || durationNum <= 0) {
-      Alert.alert('Error', 'Please enter a valid duration');
-      return;
-    }
-
     if (!taskData.startTime || !taskData.endTime) {
       Alert.alert('Error', 'Please enter both start and end times');
       return;
@@ -240,13 +233,11 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         if (updateAll && taskToEdit.recurrence) {
           const updatedTasks = await taskService.updateRecurringTask(taskToEdit.id, {
             ...taskData,
-            duration: durationNum,
           });
           setTasks(updatedTasks);
         } else {
           const updatedTask = await taskService.updateTask(taskToEdit.id, {
             ...taskData,
-            duration: durationNum,
           });
           if (updatedTask) {
             const updatedTasks = await taskService.getAllTasks();
@@ -280,7 +271,6 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         id: generateUUID(),
         title: taskData.title.trim(),
         description: taskData.description.trim(),
-        duration: durationNum,
         startDate: taskData.startDate,
         startTime: taskData.startTime,
         endTime: taskData.endTime,

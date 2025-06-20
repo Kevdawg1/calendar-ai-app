@@ -155,7 +155,6 @@ export const GoalsScreen = () => {
           id: task.id,
           title: task.title,
           description: task.description || '',
-          duration: task.duration,
           startDate: task.startDate,
           startTime: task.startTime,
           endTime: task.endTime,
@@ -204,6 +203,7 @@ export const GoalsScreen = () => {
         onChangeText={setNewGoalText}
         placeholder="Enter your goal"
         multiline
+        maxLength={200}
       />
       <Text style={sharedStyles.sectionLabel}>Goal Type</Text>
       <View style={sharedStyles.formSectionWide}>

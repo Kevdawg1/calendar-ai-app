@@ -21,7 +21,6 @@ type AddTaskModalProps = {
   onSave: (taskData: {
     title: string;
     description: string;
-    duration: string;
     startTime: string;
     endTime: string;
     goalId: string;
@@ -51,7 +50,6 @@ export function AddTaskModal({
 }: AddTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [duration, setDuration] = useState('');
   const [selectedGoal, setSelectedGoal] = useState<string>('');
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
@@ -72,7 +70,6 @@ export function AddTaskModal({
     if (isEditing && taskToEdit) {
       setTitle(taskToEdit.title);
       setDescription(taskToEdit.description || '');
-      setDuration(taskToEdit.duration.toString());
       setSelectedGoal(taskToEdit.goalId);
       setStartTime(new Date(`${taskToEdit.startDate}T${taskToEdit.startTime}`));
       setEndTime(new Date(`${taskToEdit.startDate}T${taskToEdit.endTime}`));
@@ -91,17 +88,6 @@ export function AddTaskModal({
       return;
     }
 
-    if (!selectedGoal) {
-      Alert.alert('Error', 'Please select a goal');
-      return;
-    }
-
-    const durationNum = parseInt(duration);
-    if (isNaN(durationNum) || durationNum <= 0) {
-      Alert.alert('Error', 'Please enter a valid duration');
-      return;
-    }
-
     // Validate start and end times
     if (startTime >= endTime) {
       Alert.alert('Error', 'End time must be after start time');
@@ -111,10 +97,9 @@ export function AddTaskModal({
     const taskData = {
       title: title.trim(),
       description: description.trim(),
-      duration,
       startTime: format(startTime, 'HH:mm'),
       endTime: format(endTime, 'HH:mm'),
-      goalId: selectedGoal,
+      goalId: selectedGoal || '', // Make goal optional
       startDate: format(taskDate, 'yyyy-MM-dd'),
       recurrence: recurrence || undefined,
     };
@@ -126,7 +111,6 @@ export function AddTaskModal({
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setDuration('');
     setSelectedGoal('');
     setStartTime(new Date());
     setEndTime(new Date());
@@ -188,6 +172,7 @@ export function AddTaskModal({
               placeholder="Task Title"
               value={title}
               onChangeText={setTitle}
+              maxLength={200}
             />
             <TextInput
               style={[styles.input, styles.textArea]}
@@ -196,13 +181,7 @@ export function AddTaskModal({
               onChangeText={setDescription}
               multiline
               numberOfLines={4}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Duration (minutes)"
-              value={duration}
-              onChangeText={setDuration}
-              keyboardType="numeric"
+              maxLength={500}
             />
 
             <TouchableOpacity
@@ -226,33 +205,51 @@ export function AddTaskModal({
               <Text>End Time: {format(endTime, 'hh:mm a')}</Text>
             </TouchableOpacity>
 
-            <View style={styles.goalSelector}>
-              <Text style={styles.label}>Select Goal</Text>
-              <ScrollView style={styles.goalList}>
-                {goals.map((goal) => (
+            {goals.length > 0 && (
+              <View style={styles.goalSelector}>
+                <Text style={styles.label}>Select Goal (Optional)</Text>
+                <ScrollView style={styles.goalList}>
                   <TouchableOpacity
-                    key={goal.id}
                     style={[
                       styles.goalOption,
-                      selectedGoal === goal.id && styles.selectedGoal,
+                      !selectedGoal && styles.selectedGoal,
                     ]}
-                    onPress={() => setSelectedGoal(goal.id)}
+                    onPress={() => setSelectedGoal('')}
                   >
                     <Text
                       style={[
                         styles.goalOptionText,
-                        selectedGoal === goal.id && styles.selectedGoalText,
+                        !selectedGoal && styles.selectedGoalText,
                       ]}
                     >
-                      {goal.text}
+                      No Goal
                     </Text>
                   </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
+                  {goals.map((goal) => (
+                    <TouchableOpacity
+                      key={goal.id}
+                      style={[
+                        styles.goalOption,
+                        selectedGoal === goal.id && styles.selectedGoal,
+                      ]}
+                      onPress={() => setSelectedGoal(goal.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.goalOptionText,
+                          selectedGoal === goal.id && styles.selectedGoalText,
+                        ]}
+                      >
+                        {goal.text}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
 
             <View style={styles.recurrenceContainer}>
-              <Text style={styles.label}>Recurrence</Text>
+              <Text style={styles.label}>Recurrence (Optional)</Text>
               <View style={styles.recurrenceOptions}>
                 {['daily', 'weekly', 'monthly', 'seasonal'].map((freq) => (
                   <TouchableOpacity
@@ -261,13 +258,18 @@ export function AddTaskModal({
                       styles.recurrenceButton,
                       recurrence?.frequency === freq && styles.selectedRecurrence,
                     ]}
-                    onPress={() =>
-                      setRecurrence({
-                        frequency: freq as 'daily' | 'weekly' | 'monthly' | 'seasonal',
-                        interval: 1,
-                        endDate: format(new Date(), 'yyyy-MM-dd'),
-                      })
-                    }
+                    onPress={() => {
+                      // Toggle recurrence - if already selected, deselect it
+                      if (recurrence?.frequency === freq) {
+                        setRecurrence(null);
+                      } else {
+                        setRecurrence({
+                          frequency: freq as 'daily' | 'weekly' | 'monthly' | 'seasonal',
+                          interval: 1,
+                          endDate: format(new Date(), 'yyyy-MM-dd'),
+                        });
+                      }
+                    }}
                   >
                     <Text
                       style={[
