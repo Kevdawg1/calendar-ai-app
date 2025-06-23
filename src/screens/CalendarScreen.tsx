@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert, StyleSheet } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -32,8 +32,19 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   const [taskToEdit, setTaskToEdit] = useState<Task | undefined>();
   const [isEditing, setIsEditing] = useState(false);
   const [updateAll, setUpdateAll] = useState(false);
+  const [isCalendarVisible, setIsCalendarVisible] = useState(true);
   const scrollViewRef = React.useRef<ScrollView>(null);
   const calendarRef = React.useRef<any>(null);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={() => setIsCalendarVisible(!isCalendarVisible)} style={{ marginRight: 10 }}>
+          <Ionicons name={isCalendarVisible ? 'eye-off-outline' : 'eye-outline'} size={24} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, isCalendarVisible]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -68,25 +79,10 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   }, []);
 
   useEffect(() => {
-    const handleNewTasks = async () => {
-      if (route.params?.tasks) {
-        try {
-          console.log('Received tasks from route params:', route.params.tasks);
-          const newTasks = await taskService.addTasks(route.params.tasks as Task[]);
-          console.log('Added tasks to service:', newTasks);
-          setTasks(prevTasks => {
-            const existingTaskIds = new Set(newTasks.map(task => task.id));
-            const filteredPrevTasks = prevTasks.filter(task => !existingTaskIds.has(task.id));
-            return [...filteredPrevTasks, ...newTasks];
-          });
-        } catch (error) {
-          console.error('Error adding tasks:', error);
-          Alert.alert('Error', 'Failed to add tasks to calendar');
-        }
-      }
-    };
-
-    handleNewTasks();
+    if (route.params?.tasks) {
+      const newTasks = route.params.tasks as Task[];
+      setTasks(prevTasks => [...prevTasks, ...newTasks]);
+    }
   }, [route.params?.tasks]);
 
   const getGoalText = (goalId: string) => {
@@ -253,20 +249,6 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         Alert.alert('Error', 'Failed to update task');
       }
     } else {
-      // Check for duplicate tasks
-      const isDuplicate = tasks.some(task => 
-        task.title === taskData.title.trim() &&
-        task.startDate === taskData.startDate &&
-        task.startTime === taskData.startTime &&
-        task.endTime === taskData.endTime &&
-        task.goalId === taskData.goalId
-      );
-
-      if (isDuplicate) {
-        Alert.alert('Error', 'A task with the same title, date, time, and goal already exists');
-        return;
-      }
-
       const task: Task = {
         id: generateUUID(),
         title: taskData.title.trim(),
@@ -278,12 +260,12 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         status: 'pending',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        recurrence: taskData.recurrence
+        recurrence: taskData.recurrence,
       };
 
       try {
         const addedTask = (await taskService.addTasks([task]))[0];
-        setTasks([...tasks, addedTask]);
+        setTasks(prev => [...prev, addedTask]);
         setIsAddTaskModalVisible(false);
       } catch (error) {
         console.error('Error adding task:', error);
@@ -293,10 +275,7 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   };
 
   const getTasksForDate = (date: string) => {
-    console.log('Getting tasks for date:', date);
-    console.log('All tasks:', tasks);
-    
-    const filteredTasks = tasks.filter(task => {
+    const tasksForDay = tasks.filter(task => {
       if (!task.startDate || !task.goalId || !task.status || !task.createdAt || !task.updatedAt) {
         console.log('Task filtered out due to missing required fields:', task);
         return false;
@@ -346,9 +325,16 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
       
       return false;
     });
-    
-    console.log('Filtered tasks for date:', filteredTasks);
-    return filteredTasks;
+
+    return tasksForDay.sort((a, b) => {
+      if (!a.startTime || !b.startTime) return 0;
+      const timeA = a.startTime.split(':').map(Number);
+      const timeB = b.startTime.split(':').map(Number);
+      if (timeA[0] !== timeB[0]) {
+        return timeA[0] - timeB[0];
+      }
+      return timeA[1] - timeB[1];
+    });
   };
 
   const getGoalColor = (goalId: string) => {
@@ -438,84 +424,75 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     }
   };
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={handleTodayPress}
-        >
-          <Text style={styles.headerButtonText}>Today</Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation]);
-
   return (
     <View style={sharedStyles.container}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <Text style={[sharedStyles.header, { marginBottom: 0 }]}>Calendar</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={handleTodayPress}>
-          <Text style={styles.headerButtonText}>Today</Text>
-        </TouchableOpacity>
-      </View>
-      <Calendar
-        key={calendarKey}
-        current={currentMonth}
-        onMonthChange={handleMonthChange}
-        onDayPress={handleDayPress}
-        markedDates={getMarkedDates(tasks)}
-        markingType="multi-dot"
-        theme={{
-          todayTextColor: theme.colors.primary,
-          selectedDayBackgroundColor: theme.colors.primary,
-          selectedDayTextColor: '#fff',
-          dotColor: theme.colors.primary,
-          selectedDotColor: '#fff',
-          arrowColor: theme.colors.primary,
-          dotStyle: {
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            marginTop: 2,
-          },
-          // @ts-ignore
-          'stylesheet.calendar.main': {
-            container: {
-              paddingLeft: 5,
-              paddingRight: 5,
-            },
-            dayContainer: {
-              width: 32,
-              height: 32,
-              alignItems: 'center',
-              justifyContent: 'center',
-            },
-            selected: {
-              backgroundColor: theme.colors.primary,
-              borderRadius: 16,
-              width: 32,
-              height: 32,
-            },
-            today: {
-              backgroundColor: 'transparent',
-            },
-            todayText: {
-              color: theme.colors.primary,
-            },
-          },
-          // @ts-ignore
-          'stylesheet.calendar.header': {
-            dayTextAtIndex0: {
-              color: theme.colors.primary,
-            },
-          },
-        }}
-      />
+      {isCalendarVisible && (
+        <>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={[sharedStyles.header, { marginBottom: 0 }]}>Calendar</Text>
+            <TouchableOpacity style={styles.headerButton} onPress={handleTodayPress}>
+              <Text style={styles.headerButtonText}>Today</Text>
+            </TouchableOpacity>
+          </View>
+          <Calendar
+            key={calendarKey}
+            current={currentMonth}
+            onMonthChange={handleMonthChange}
+            onDayPress={handleDayPress}
+            markedDates={getMarkedDates(tasks)}
+            markingType="multi-dot"
+            theme={{
+              todayTextColor: theme.colors.primary,
+              selectedDayBackgroundColor: theme.colors.primary,
+              selectedDayTextColor: '#fff',
+              dotColor: theme.colors.primary,
+              selectedDotColor: '#fff',
+              arrowColor: theme.colors.primary,
+              dotStyle: {
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                marginTop: 2,
+              },
+              // @ts-ignore
+              'stylesheet.calendar.main': {
+                container: {
+                  paddingLeft: 5,
+                  paddingRight: 5,
+                },
+                dayContainer: {
+                  width: 32,
+                  height: 32,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                selected: {
+                  backgroundColor: theme.colors.primary,
+                  borderRadius: 16,
+                  width: 32,
+                  height: 32,
+                },
+                today: {
+                  backgroundColor: 'transparent',
+                },
+                todayText: {
+                  color: theme.colors.primary,
+                },
+              },
+              // @ts-ignore
+              'stylesheet.calendar.header': {
+                dayTextAtIndex0: {
+                  color: theme.colors.primary,
+                },
+              },
+            }}
+          />
+        </>
+      )}
 
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
-        style={sharedStyles.content} 
+        style={[sharedStyles.content, !isCalendarVisible && { flex: 1 }]}
         contentContainerStyle={{ flexGrow: 1 }}
       >
         <View style={sharedStyles.header}>
@@ -542,21 +519,22 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
 
-      <AddTaskModal
-        visible={isAddTaskModalVisible}
-        onClose={() => {
-          setIsAddTaskModalVisible(false);
-          setTaskToEdit(undefined);
-          setIsEditing(false);
-          setUpdateAll(false);
-        }}
-        onSave={handleAddTask}
-        goals={goals}
-        selectedDate={selectedDate}
-        taskToEdit={taskToEdit}
-        isEditing={isEditing}
-        onUpdateAll={updateAll}
-      />
+      {isAddTaskModalVisible && (
+        <AddTaskModal
+          isVisible={isAddTaskModalVisible}
+          onClose={() => {
+            setIsAddTaskModalVisible(false);
+            setTaskToEdit(undefined);
+            setIsEditing(false);
+          }}
+          onSubmit={handleAddTask}
+          goals={goals}
+          selectedDate={selectedDate}
+          taskToEdit={taskToEdit}
+          isEditing={isEditing}
+          updateAll={updateAll}
+        />
+      )}
     </View>
   );
 }

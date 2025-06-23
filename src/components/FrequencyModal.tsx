@@ -1,20 +1,24 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { theme } from '../theme';
-import { LifeAdminTask } from '../data/lifeAdminTasks';
 
-const FREQUENCIES: LifeAdminTask['frequency'][] = ['daily', 'weekly', 'monthly', 'seasonal'];
+type Frequency = 'daily' | 'weekly' | 'monthly' | 'seasonal';
+
+const FREQUENCIES: Frequency[] = [
+  'daily',
+  'weekly',
+  'monthly',
+  'seasonal',
+];
 
 interface FrequencyModalProps {
   visible: boolean;
-  selectedFrequency: LifeAdminTask['frequency'] | null;
   onClose: () => void;
-  onSelect: (frequency: LifeAdminTask['frequency']) => void;
+  onSelect: (frequency: Frequency) => void;
 }
 
 export const FrequencyModal: React.FC<FrequencyModalProps> = ({
   visible,
-  selectedFrequency,
   onClose,
   onSelect,
 }) => {
@@ -35,16 +39,10 @@ export const FrequencyModal: React.FC<FrequencyModalProps> = ({
           {FREQUENCIES.map((frequency) => (
             <TouchableOpacity
               key={frequency}
-              style={[
-                styles.frequencyOption,
-                selectedFrequency === frequency && styles.frequencyOptionSelected,
-              ]}
+              style={styles.frequencyOption}
               onPress={() => onSelect(frequency)}
             >
-              <Text style={[
-                styles.frequencyText,
-                selectedFrequency === frequency && styles.frequencyTextSelected,
-              ]}>
+              <Text style={styles.frequencyText}>
                 {frequency.charAt(0).toUpperCase() + frequency.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -81,15 +79,9 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     marginBottom: theme.spacing.sm,
   },
-  frequencyOptionSelected: {
-    backgroundColor: theme.colors.primary,
-  },
   frequencyText: {
     fontSize: theme.typography.sizes.md,
     color: theme.colors.text.primary,
     textAlign: 'center',
-  },
-  frequencyTextSelected: {
-    color: theme.colors.text.inverse,
   },
 }); 

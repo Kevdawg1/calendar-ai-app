@@ -9,6 +9,7 @@ interface CategorySectionProps {
   category: string;
   isExpanded: boolean;
   isAllSelected: boolean;
+  isPartiallySelected: boolean;
   onToggle: (category: string) => void;
   onToggleAll: (category: string) => void;
   children: React.ReactNode;
@@ -18,10 +19,18 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
   category,
   isExpanded,
   isAllSelected,
+  isPartiallySelected,
   onToggle,
   onToggleAll,
   children,
 }) => {
+  // Determine checkbox state: true for checked, false for unchecked, undefined for partially checked
+  const getCheckboxValue = () => {
+    if (isAllSelected) return true;
+    if (isPartiallySelected) return undefined; // This will show as partially checked
+    return false;
+  };
+
   return (
     <View style={styles.categoryContainer}>
       <TouchableOpacity
@@ -31,7 +40,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
         <View style={sharedStyles.cardHeader}>
           <View style={sharedStyles.cardContentRow}>
             <Checkbox
-              value={isAllSelected}
+              value={getCheckboxValue()}
               onValueChange={() => onToggleAll(category)}
               color={theme.colors.primary}
             />

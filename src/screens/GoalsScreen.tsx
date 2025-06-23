@@ -37,11 +37,20 @@ export const GoalsScreen = () => {
   const [editPriority, setEditPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [editTimeCommitment, setEditTimeCommitment] = useState('20');
   const [editColor, setEditColor] = useState(GOAL_COLORS[0]);
+  const [remainingHours, setRemainingHours] = useState<number>(0);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [infoContent, setInfoContent] = useState<{ title: string; content: string }>({ title: '', content: '' });
 
   useEffect(() => {
     loadGoals();
     loadUserPreferences();
   }, []);
+
+  useEffect(() => {
+    if (userPreferences) {
+      calculateRemainingHours();
+    }
+  }, [userPreferences, goals]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -68,6 +77,56 @@ export const GoalsScreen = () => {
     } catch (error) {
       console.error('Error loading user preferences:', error);
     }
+  };
+
+  const calculateRemainingHours = async () => {
+    if (!userPreferences) return;
+
+    try {
+      // Calculate total available hours per week
+      const wakeUpTime = new Date(userPreferences.wakeUpTime);
+      const sleepTime = new Date(userPreferences.sleepTime);
+      
+      // Calculate hours between wake up and sleep
+      let availableHours = (sleepTime.getTime() - wakeUpTime.getTime()) / (1000 * 60 * 60);
+      if (availableHours < 0) {
+        availableHours += 24; // Handle overnight sleep
+      }
+      const weeklyAvailableHours = availableHours * 7;
+
+      // Subtract work/study hours
+      let workHours = 0;
+      if (userPreferences.hasWorkSchedule) {
+        Object.values(userPreferences.workSchedule).forEach(day => {
+          const startTime = new Date(day.startTime);
+          const endTime = new Date(day.endTime);
+          const dayWorkHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+          workHours += dayWorkHours;
+        });
+      }
+
+      // Get all tasks and calculate their total duration
+      const allTasks = await taskService.getAllTasks();
+      const taskHours = allTasks.reduce((total, task) => {
+        if (task.startTime && task.endTime) {
+          const startTime = new Date(`2000-01-01T${task.startTime}`);
+          const endTime = new Date(`2000-01-01T${task.endTime}`);
+          const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+          return total + duration;
+        }
+        return total;
+      }, 0);
+
+      const remaining = weeklyAvailableHours - workHours - taskHours;
+      setRemainingHours(Math.max(0, remaining));
+    } catch (error) {
+      console.error('Error calculating remaining hours:', error);
+    }
+  };
+
+  const showInfoModal = (title: string, content: string) => {
+    setInfoContent({ title, content });
+    setInfoModalVisible(true);
   };
 
   const handleAddGoal = async () => {
@@ -195,6 +254,18 @@ export const GoalsScreen = () => {
     </View>
   );
 
+  const renderInfoButton = (onPress: () => void) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        marginLeft: 8,
+        padding: 4,
+      }}
+    >
+      <Ionicons name="information-circle-outline" size={20} color={theme.colors.primary} />
+    </TouchableOpacity>
+  );
+
   const renderGoalForm = () => (
     <View style={sharedStyles.inputContainer}>
       <TextInput
@@ -205,7 +276,13 @@ export const GoalsScreen = () => {
         multiline
         maxLength={200}
       />
-      <Text style={sharedStyles.sectionLabel}>Goal Type</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={sharedStyles.sectionLabel}>Goal Type</Text>
+        {renderInfoButton(() => showInfoModal(
+          'Goal Type',
+          '• Short Term: 1-3 months\n• Medium Term: 3-12 months\n• Long Term: 1-5 years'
+        ))}
+      </View>
       <View style={sharedStyles.formSectionWide}>
         <View style={sharedStyles.typeContainerRow}>
           <TouchableOpacity
@@ -237,7 +314,13 @@ export const GoalsScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-      <Text style={sharedStyles.sectionLabel}>Priority Level</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={sharedStyles.sectionLabel}>Priority Level</Text>
+        {renderInfoButton(() => showInfoModal(
+          'Priority Level',
+          '• Low: Nice to have, can be delayed\n• Medium: Important but flexible\n• High: Critical, must be completed'
+        ))}
+      </View>
       <View style={sharedStyles.formSectionWide}>
         <View style={sharedStyles.typeContainerRow}>
           <TouchableOpacity
@@ -303,7 +386,13 @@ export const GoalsScreen = () => {
             value={editGoal?.text || ''}
             editable={false}
           />
-          <Text style={sharedStyles.sectionLabel}>Goal Type</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={sharedStyles.sectionLabel}>Goal Type</Text>
+            {renderInfoButton(() => showInfoModal(
+              'Goal Type',
+              '• Short Term: 1-3 months\n• Medium Term: 3-12 months\n• Long Term: 1-5 years'
+            ))}
+          </View>
           <View style={sharedStyles.formSectionWide}>
             <View style={sharedStyles.typeContainerRow}>
               <TouchableOpacity
@@ -335,7 +424,13 @@ export const GoalsScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-          <Text style={sharedStyles.sectionLabel}>Priority Level</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={sharedStyles.sectionLabel}>Priority Level</Text>
+            {renderInfoButton(() => showInfoModal(
+              'Priority Level',
+              '• Low: Nice to have, can be delayed\n• Medium: Important but flexible\n• High: Critical, must be completed'
+            ))}
+          </View>
           <View style={sharedStyles.formSectionWide}>
             <View style={sharedStyles.typeContainerRow}>
               <TouchableOpacity
@@ -396,6 +491,30 @@ export const GoalsScreen = () => {
     </Modal>
   );
 
+  const renderInfoModal = () => (
+    <Modal
+      visible={infoModalVisible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={() => setInfoModalVisible(false)}
+    >
+      <View style={sharedStyles.modalContainer}>
+        <View style={[sharedStyles.modalContent, { maxWidth: 300 }]}>
+          <Text style={sharedStyles.modalTitle}>{infoContent.title}</Text>
+          <Text style={[sharedStyles.cardText, { lineHeight: 24, marginBottom: 20 }]}>
+            {infoContent.content}
+          </Text>
+          <TouchableOpacity
+            style={[sharedStyles.modalButton, sharedStyles.saveButton]}
+            onPress={() => setInfoModalVisible(false)}
+          >
+            <Text style={sharedStyles.modalButtonText}>Got it</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   const renderGoalItem = ({ item }: { item: Goal }) => (
     <View style={[sharedStyles.card, { borderLeftWidth: 6, borderLeftColor: item.color }] }>
       <View style={sharedStyles.cardHeader}>
@@ -447,8 +566,25 @@ export const GoalsScreen = () => {
           {renderGoalForm()}
         </Section>
         <Section title="Your Goals">
+          {userPreferences && (
+            <View style={[sharedStyles.card, { marginBottom: 16, backgroundColor: theme.colors.background }]}>
+              <Text style={[sharedStyles.cardTitle, { color: theme.colors.primary, marginBottom: 8 }]}>
+                Weekly Time Balance
+              </Text>
+              <Text style={sharedStyles.cardText}>
+                Remaining hours this week: <Text style={{ fontWeight: 'bold', color: remainingHours > 0 ? theme.colors.success : theme.colors.danger }}>
+                  {remainingHours.toFixed(1)} hours
+                </Text>
+              </Text>
+              <Text style={[sharedStyles.cardText, { fontSize: 12, color: theme.colors.text.secondary, marginTop: 4 }]}>
+                Based on your sleep schedule, work hours, and existing tasks
+              </Text>
+            </View>
+          )}
           {goals.length === 0 ? (
             <EmptyState
+              icon="flag-outline"
+              title="No Goals Yet"
               message="No goals yet. Add your first goal above!"
             />
           ) : (
@@ -462,6 +598,7 @@ export const GoalsScreen = () => {
         </Section>
       </ScrollView>
       {renderEditGoalModal()}
+      {renderInfoModal()}
     </View>
   );
 }; 

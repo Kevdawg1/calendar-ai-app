@@ -6,22 +6,27 @@ interface SectionProps {
   title: string;
   children: React.ReactNode;
   style?: ViewStyle;
+  flexContent?: boolean;
 }
 
 export const Section: React.FC<SectionProps> = ({
   title,
   children,
   style,
+  flexContent,
 }) => {
   const containerStyle: ViewStyle = {
     ...styles.container,
     ...(style || {}),
   };
+  if (flexContent) {
+    containerStyle.flex = 1;
+  }
 
   return (
     <View style={containerStyle}>
       <Text style={styles.title}>{title}</Text>
-      <View style={styles.content}>
+      <View style={[styles.content, flexContent && { flex: 1, padding: 0 }]}>
         {children}
       </View>
     </View>

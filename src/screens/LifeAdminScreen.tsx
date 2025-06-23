@@ -198,14 +198,17 @@ export const LifeAdminScreen = () => {
     }
   };
 
+  const handleCollapseAll = () => {
+    setExpandedCategories(new Set());
+  };
+
   return (
     <View style={sharedStyles.container}>
       <View style={sharedStyles.header}>
         <Button
-          title="Schedule Life Admin Tasks"
-          onPress={handleScheduleTasks}
+          title="Collapse All"
+          onPress={handleCollapseAll}
           style={sharedStyles.button}
-          disabled={isLoading}
         />
       </View>
 
@@ -222,20 +225,23 @@ export const LifeAdminScreen = () => {
             Manage your recurring life admin tasks. Select the tasks you want to schedule in your calendar.
           </Text>
 
-          {categories.map((category) => (
-            <CategorySection
-              key={category}
-              category={category}
-              isExpanded={expandedCategories.has(category)}
-              isAllSelected={tasks
-                .filter(task => task.category === category)
-                .every(task => selectedTasks.has(task.id))}
-              onToggle={toggleCategory}
-              onToggleAll={toggleCategoryAll}
-            >
-              {tasks
-                .filter(task => task.category === category)
-                .map((task) => (
+          {categories.map((category) => {
+            const categoryTasks = tasks.filter(task => task.category === category);
+            const selectedCategoryTasks = categoryTasks.filter(task => selectedTasks.has(task.id));
+            const isAllSelected = categoryTasks.length > 0 && selectedCategoryTasks.length === categoryTasks.length;
+            const isPartiallySelected = selectedCategoryTasks.length > 0 && selectedCategoryTasks.length < categoryTasks.length;
+
+            return (
+              <CategorySection
+                key={category}
+                category={category}
+                isExpanded={expandedCategories.has(category)}
+                isAllSelected={isAllSelected}
+                isPartiallySelected={isPartiallySelected}
+                onToggle={toggleCategory}
+                onToggleAll={toggleCategoryAll}
+              >
+                {categoryTasks.map((task) => (
                   <LifeAdminTaskItem
                     key={task.id}
                     task={task}
@@ -248,20 +254,35 @@ export const LifeAdminScreen = () => {
                     }}
                   />
                 ))}
-            </CategorySection>
-          ))}
+              </CategorySection>
+            );
+          })}
         </Section>
       </ScrollView>
 
-      <FrequencyModal
-        visible={showFrequencyModal}
-        selectedFrequency={editingTask?.frequency || null}
-        onClose={() => {
-          setShowFrequencyModal(false);
-          setEditingTask(null);
-        }}
-        onSelect={(frequency) => editingTask && handleFrequencySelect(editingTask, frequency)}
-      />
+      <View style={sharedStyles.footer}>
+        <Button
+          title="Schedule Life Admin Tasks"
+          onPress={handleScheduleTasks}
+          style={sharedStyles.button}
+          disabled={isLoading}
+        />
+      </View>
+
+      {editingTask && (
+        <FrequencyModal
+          visible={showFrequencyModal}
+          onClose={() => {
+            setShowFrequencyModal(false);
+            setEditingTask(null);
+          }}
+          onSelect={(frequency) => {
+            if (editingTask) {
+              handleFrequencySelect(editingTask, frequency);
+            }
+          }}
+        />
+      )}
     </View>
   );
 }; 

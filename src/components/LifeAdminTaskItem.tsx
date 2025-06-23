@@ -32,7 +32,6 @@ export const LifeAdminTaskItem: React.FC<LifeAdminTaskItemProps> = ({
           value={isSelected || isScheduled}
           onValueChange={() => onToggle(task.id)}
           color={isSelected || isScheduled ? theme.colors.primary : undefined}
-          disabled={isScheduled}
         />
         <View style={styles.taskInfo}>
           <Text style={[

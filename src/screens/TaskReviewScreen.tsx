@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,16 @@ export const TaskReviewScreen = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [goals, setGoals] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Sort tasks by date and time
+    const sortedTasks = [...tasks].sort((a, b) => {
+      const dateA = new Date(`${a.startDate}T${a.startTime}`);
+      const dateB = new Date(`${b.startDate}T${b.startTime}`);
+      return dateA.getTime() - dateB.getTime();
+    });
+    setTasks(sortedTasks);
+  }, []);
 
   React.useEffect(() => {
     // Load goals for the task modal
@@ -155,18 +165,20 @@ export const TaskReviewScreen = () => {
         {tasks.map(renderTaskItem)}
       </ScrollView>
 
-      <AddTaskModal
-        visible={showAddTaskModal}
-        onClose={() => {
-          setShowAddTaskModal(false);
-          setEditingTask(null);
-        }}
-        onSave={handleSaveTask}
-        goals={goals}
-        selectedDate={editingTask?.startDate || new Date().toISOString().split('T')[0]}
-        taskToEdit={editingTask || undefined}
-        isEditing={!!editingTask}
-      />
+      {showAddTaskModal && (
+        <AddTaskModal
+          isVisible={showAddTaskModal}
+          onClose={() => {
+            setShowAddTaskModal(false);
+            setEditingTask(null);
+          }}
+          onSubmit={handleSaveTask}
+          goals={goals}
+          selectedDate={editingTask?.startDate || new Date().toISOString().split('T')[0]}
+          taskToEdit={editingTask || undefined}
+          isEditing={!!editingTask}
+        />
+      )}
     </View>
   );
 }; 

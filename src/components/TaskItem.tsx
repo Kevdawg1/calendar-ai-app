@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Task } from '../types';
 import { theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
+import { Badge } from './Badge';
 
 type TaskItemProps = {
   task: Task;
@@ -24,17 +25,27 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const goalColor = getGoalColor(task.goalId);
   const isCompleted = task.status === 'completed';
 
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) {
+      return text;
+    }
+    return `${text.substring(0, maxLength)}...`;
+  };
+
   return (
     <TouchableOpacity
       style={[
         styles.container,
-        { borderLeftColor: goalColor, borderLeftWidth: 4 }
+        { borderLeftColor: goalColor, borderLeftWidth: 4 },
+        isCompleted && styles.completedContainer,
       ]}
       onPress={() => onPress(task.id)}
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>{task.title}</Text>
+          <Text style={[styles.title, isCompleted && styles.completedText]}>
+            {task.title}
+          </Text>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => onDelete(task.id)}
@@ -55,9 +66,18 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 
         <View style={styles.taskFooter}>
           <View style={styles.taskInfo}>
-            <Text style={[styles.goalText, { color: goalColor }]}>
-              {getGoalText(task.goalId)}
-            </Text>
+            <View style={styles.goalRecurrenceContainer}>
+              <Text style={[styles.goalText, { color: goalColor }]}>
+                {truncateText(getGoalText(task.goalId), 20)}
+              </Text>
+              {task.recurrence && (
+                <Badge
+                  label={`${task.recurrence.frequency
+                    .charAt(0)
+                    .toUpperCase()}${task.recurrence.frequency.slice(1)}`}
+                />
+              )}
+            </View>
             <View style={styles.statusContainer}>
               <TouchableOpacity
                 style={[
@@ -110,6 +130,9 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
     ...theme.shadows.sm,
   },
+  completedContainer: {
+    backgroundColor: theme.colors.surface,
+  },
   content: {
     padding: theme.spacing.md,
   },
@@ -124,6 +147,10 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.text.primary,
     flex: 1,
+  },
+  completedText: {
+    textDecorationLine: 'line-through',
+    color: theme.colors.text.secondary,
   },
   description: {
     fontSize: theme.typography.sizes.sm,
@@ -143,6 +170,11 @@ const styles = StyleSheet.create({
   taskInfo: {
     flexDirection: 'column',
     gap: 8,
+  },
+  goalRecurrenceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   goalText: {
     fontSize: theme.typography.sizes.sm,

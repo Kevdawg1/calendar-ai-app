@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export interface UserPreferences {
   wakeUpTime: Date;
   sleepTime: Date;
-  hasWorkSchedule: boolean;
+  hasWorkSchedule: boolean | undefined;
   workSchedule: {
     [key: string]: {
       startTime: Date;
@@ -84,6 +84,7 @@ export const userPreferencesService = {
       await ensureAsyncStorageReady();
       await AsyncStorage.removeItem(PREFERENCES_STORAGE_KEY);
       await AsyncStorage.removeItem(SURVEY_COMPLETED_KEY);
+      await AsyncStorage.setItem('@is_first_time_user', 'true');
     } catch (error) {
       console.error('Error clearing user preferences:', error);
       throw error;

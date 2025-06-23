@@ -4,15 +4,7 @@ import { Card } from './Card';
 import { Badge } from './Badge';
 import { IconButton } from './IconButton';
 import { theme } from '../theme';
-
-export interface Goal {
-  id: string;
-  title: string;
-  description?: string;
-  type: 'personal' | 'professional' | 'health' | 'learning';
-  priority: 'low' | 'medium' | 'high';
-  weeklyHours: number;
-}
+import { Goal } from '../types';
 
 interface GoalItemProps {
   goal: Goal;
@@ -29,27 +21,27 @@ export const GoalItem: React.FC<GoalItemProps> = ({
   onCalendarPress,
   style,
 }) => {
-  const getTypeVariant = (type: Goal['type']): 'primary' | 'secondary' | 'warning' | 'danger' => {
+  const getTypeColor = (type: Goal['type']): string => {
     switch (type) {
-      case 'professional':
-        return 'primary';
-      case 'health':
-        return 'secondary';
-      case 'learning':
-        return 'warning';
+      case 'short':
+        return '#007AFF'; // Blue
+      case 'medium':
+        return '#34C759'; // Green
+      case 'long':
+        return '#FF9500'; // Orange
       default:
-        return 'danger';
+        return theme.colors.primary;
     }
   };
 
-  const getPriorityVariant = (priority: Goal['priority']): 'primary' | 'warning' | 'danger' => {
+  const getPriorityColor = (priority: Goal['priority']): string => {
     switch (priority) {
       case 'high':
-        return 'danger';
+        return '#FF3B30'; // Red
       case 'medium':
-        return 'warning';
+        return '#FF9500'; // Orange
       default:
-        return 'primary';
+        return '#007AFF'; // Blue
     }
   };
 
@@ -61,7 +53,7 @@ export const GoalItem: React.FC<GoalItemProps> = ({
   return (
     <Card style={containerStyle}>
       <View style={styles.header}>
-        <Text style={styles.title}>{goal.title}</Text>
+        <Text style={styles.title}>{goal.text}</Text>
         <View style={styles.actions}>
           {onCalendarPress && (
             <IconButton
@@ -90,23 +82,19 @@ export const GoalItem: React.FC<GoalItemProps> = ({
         </View>
       </View>
 
-      {goal.description && (
-        <Text style={styles.description}>{goal.description}</Text>
-      )}
-
       <View style={styles.details}>
         <View style={styles.badges}>
           <Badge
             label={goal.type}
-            variant={getTypeVariant(goal.type)}
+            color={getTypeColor(goal.type)}
           />
           <Badge
             label={goal.priority}
-            variant={getPriorityVariant(goal.priority)}
+            color={getPriorityColor(goal.priority)}
           />
         </View>
         <Text style={styles.weeklyHours}>
-          {goal.weeklyHours} hours/week
+          {goal.timeCommitment} hours/week
         </Text>
       </View>
     </Card>
@@ -132,11 +120,6 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: theme.spacing.xs,
-  },
-  description: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.sm,
   },
   details: {
     flexDirection: 'row',

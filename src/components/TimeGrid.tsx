@@ -3,8 +3,18 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Task } from '../types';
 import { TaskItem } from './TaskItem';
 
+interface ScheduleItemProps {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  color: string;
+  type: 'schedule';
+}
+
 interface TimeGridProps {
   tasks: Task[];
+  scheduleItems?: ScheduleItemProps[];
   onTaskPress: (taskId: string) => void;
   onTaskDelete: (taskId: string) => void;
   onStatusChange: (taskId: string, status: Task['status']) => void;
@@ -14,34 +24,39 @@ interface TimeGridProps {
 
 const HOUR_HEIGHT = 60;
 
+const ScheduleItem: React.FC<{ item: ScheduleItemProps }> = ({ item }) => (
+  <View style={[styles.scheduleItem, { backgroundColor: item.color }]}>
+    <Text style={styles.scheduleItemText}>{item.title}</Text>
+  </View>
+);
+
 export const TimeGrid: React.FC<TimeGridProps> = ({
   tasks,
+  scheduleItems = [],
   onTaskPress,
   onTaskDelete,
   onStatusChange,
   getGoalText,
   getGoalColor,
 }) => {
-  const getEarliestHour = (tasks: Task[]) => {
-    if (tasks.length === 0) return 8;
-    return Math.min(...tasks.map(task => {
-      if (!task.startTime) return 8;
-      const [hours] = task.startTime.split(':').map(Number);
-      return hours;
-    }));
+  const getEarliestHour = (tasks: Task[], schedule: ScheduleItemProps[]) => {
+    const taskHours = tasks.map(t => t.startTime ? parseInt(t.startTime.split(':')[0], 10) : 24);
+    const scheduleHours = schedule.map(s => parseInt(s.startTime.split(':')[0], 10));
+    const allHours = [...taskHours, ...scheduleHours];
+    if (allHours.length === 0) return 8;
+    return Math.min(...allHours);
   };
 
-  const getLatestHour = (tasks: Task[]) => {
-    if (tasks.length === 0) return 20;
-    return Math.max(...tasks.map(task => {
-      if (!task.endTime) return 20;
-      const [hours] = task.endTime.split(':').map(Number);
-      return hours;
-    }));
+  const getLatestHour = (tasks: Task[], schedule: ScheduleItemProps[]) => {
+    const taskHours = tasks.map(t => t.endTime ? parseInt(t.endTime.split(':')[0], 10) : 0);
+    const scheduleHours = schedule.map(s => parseInt(s.endTime.split(':')[0], 10));
+    const allHours = [...taskHours, ...scheduleHours];
+    if (allHours.length === 0) return 20;
+    return Math.max(...allHours);
   };
 
-  const earliestHour = getEarliestHour(tasks);
-  const latestHour = getLatestHour(tasks);
+  const earliestHour = getEarliestHour(tasks, scheduleItems);
+  const latestHour = getLatestHour(tasks, scheduleItems);
   const hours = Array.from(
     { length: latestHour - earliestHour + 1 },
     (_, i) => earliestHour + i
@@ -55,6 +70,14 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
             {hour.toString().padStart(2, '0')}:00
           </Text>
           <View style={styles.hourContent}>
+            {scheduleItems
+              .filter(item => {
+                const [itemHour] = item.startTime.split(':').map(Number);
+                return itemHour === hour;
+              })
+              .map(item => (
+                <ScheduleItem key={item.id} item={item} />
+              ))}
             {tasks
               .filter(task => {
                 if (!task.startTime) return false;
@@ -109,5 +132,14 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 4,
     backgroundColor: '#fff',
+  },
+  scheduleItem: {
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  scheduleItemText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 }); 

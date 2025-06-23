@@ -14,39 +14,31 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '../theme';
 import { Goal, Task } from '../types';
 import { format } from 'date-fns';
+import { FrequencyModal } from './FrequencyModal';
+import { Button } from './Button';
 
 type AddTaskModalProps = {
-  visible: boolean;
+  isVisible: boolean;
   onClose: () => void;
-  onSave: (taskData: {
-    title: string;
-    description: string;
-    startTime: string;
-    endTime: string;
-    goalId: string;
-    startDate: string;
-    recurrence?: {
-      frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal';
-      interval: number;
-      endDate: string;
-    };
-  }) => void;
+  onSubmit: (taskData: any) => void;
   goals: Goal[];
-  selectedDate: string;
   taskToEdit?: Task;
   isEditing?: boolean;
-  onUpdateAll?: boolean;
+  updateAll?: boolean;
+  selectedDate: string;
 };
 
-export function AddTaskModal({ 
-  visible, 
-  onClose, 
-  onSave, 
-  goals, 
-  selectedDate,
+type Frequency = 'daily' | 'weekly' | 'monthly' | 'seasonal';
+
+export function AddTaskModal({
+  isVisible,
+  onClose,
+  onSubmit,
+  goals,
   taskToEdit,
   isEditing = false,
-  onUpdateAll = false,
+  updateAll = false,
+  selectedDate,
 }: AddTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -54,16 +46,22 @@ export function AddTaskModal({
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
   const [taskDate, setTaskDate] = useState(new Date(selectedDate));
-  const [recurrence, setRecurrence] = useState<{
-    frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal';
-    interval: number;
-    endDate: string;
-  } | null>(null);
+  const [recurrence, setRecurrence] = useState<Task['recurrence'] | undefined>(
+    undefined
+  );
 
   // Modal states for pickers
-  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
-  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(
+    Platform.OS === 'ios'
+  );
+  const [showEndTimePicker, setShowEndTimePicker] = useState(
+    Platform.OS === 'ios'
+  );
+  const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios');
+  const [showFrequencyModal, setShowFrequencyModal] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(
+    Platform.OS === 'ios'
+  );
 
   // Initialize form with task data when editing
   useEffect(() => {
@@ -71,9 +69,20 @@ export function AddTaskModal({
       setTitle(taskToEdit.title);
       setDescription(taskToEdit.description || '');
       setSelectedGoal(taskToEdit.goalId);
-      setStartTime(new Date(`${taskToEdit.startDate}T${taskToEdit.startTime}`));
-      setEndTime(new Date(`${taskToEdit.startDate}T${taskToEdit.endTime}`));
-      setTaskDate(new Date(taskToEdit.startDate));
+      const taskStartDate = taskToEdit.startDate
+        ? new Date(taskToEdit.startDate)
+        : new Date();
+      setStartTime(
+        taskToEdit.startTime
+          ? new Date(`${format(taskStartDate, 'yyyy-MM-dd')}T${taskToEdit.startTime}`)
+          : new Date()
+      );
+      setEndTime(
+        taskToEdit.endTime
+          ? new Date(`${format(taskStartDate, 'yyyy-MM-dd')}T${taskToEdit.endTime}`)
+          : new Date()
+      );
+      setTaskDate(taskStartDate);
       if (taskToEdit.recurrence) {
         setRecurrence(taskToEdit.recurrence);
       }
@@ -88,7 +97,6 @@ export function AddTaskModal({
       return;
     }
 
-    // Validate start and end times
     if (startTime >= endTime) {
       Alert.alert('Error', 'End time must be after start time');
       return;
@@ -99,32 +107,35 @@ export function AddTaskModal({
       description: description.trim(),
       startTime: format(startTime, 'HH:mm'),
       endTime: format(endTime, 'HH:mm'),
-      goalId: selectedGoal || '', // Make goal optional
+      goalId: selectedGoal || 'no-goal',
       startDate: format(taskDate, 'yyyy-MM-dd'),
-      recurrence: recurrence || undefined,
+      recurrence: recurrence,
     };
 
-    onSave(taskData);
-    resetForm();
+    onSubmit(taskData);
+    onClose();
   };
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setSelectedGoal('');
-    setStartTime(new Date());
-    setEndTime(new Date());
-    setTaskDate(new Date(selectedDate));
-    setRecurrence(null);
+    const now = new Date();
+    const initialDate = selectedDate ? new Date(selectedDate) : now;
+    setStartTime(now);
+    setEndTime(new Date(now.getTime() + 60 * 60 * 1000)); // 1 hour later
+    setTaskDate(initialDate);
+    setRecurrence(undefined);
   };
 
   const handleStartTimeChange = (event: any, selectedDate?: Date) => {
-    setShowStartTimePicker(false);
+    if (Platform.OS === 'android') {
+      setShowStartTimePicker(false);
+    }
     if (selectedDate) {
-      // If the selected start time is after the current end time, adjust end time
-      if (selectedDate > endTime) {
+      if (selectedDate >= endTime) {
         const newEndTime = new Date(selectedDate);
-        newEndTime.setHours(newEndTime.getHours() + 1); // Default to 1 hour duration
+        newEndTime.setHours(newEndTime.getHours() + 1);
         setEndTime(newEndTime);
       }
       setStartTime(selectedDate);
@@ -132,15 +143,14 @@ export function AddTaskModal({
   };
 
   const handleEndTimeChange = (event: any, selectedDate?: Date) => {
-    setShowEndTimePicker(false);
+    if (Platform.OS === 'android') {
+      setShowEndTimePicker(false);
+    }
     if (selectedDate) {
-      // Validate that end time is after start time
       if (selectedDate <= startTime) {
-        Alert.alert(
-          'Invalid Time',
-          'End time must be after start time',
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Invalid Time', 'End time must be after start time', [
+          { text: 'OK' },
+        ]);
         return;
       }
       setEndTime(selectedDate);
@@ -148,15 +158,35 @@ export function AddTaskModal({
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
     if (selectedDate) {
       setTaskDate(selectedDate);
     }
   };
 
+  const handleFrequencySelect = (frequency: Frequency) => {
+    setShowFrequencyModal(false);
+    setRecurrence({
+      frequency,
+      interval: 1,
+      endDate: format(new Date(), 'yyyy-MM-dd'),
+    });
+  };
+
+  const handleEndDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowEndDatePicker(false);
+    }
+    if (selectedDate && recurrence) {
+      setRecurrence({ ...recurrence, endDate: format(selectedDate, 'yyyy-MM-dd') });
+    }
+  };
+
   return (
     <Modal
-      visible={visible}
+      visible={isVisible}
       animationType="slide"
       transparent={true}
       onRequestClose={onClose}
@@ -167,6 +197,7 @@ export function AddTaskModal({
             {isEditing ? 'Edit Task' : 'Add New Task'}
           </Text>
           <ScrollView style={styles.scrollView}>
+            <Text style={styles.label}>Title</Text>
             <TextInput
               style={styles.input}
               placeholder="Task Title"
@@ -174,9 +205,10 @@ export function AddTaskModal({
               onChangeText={setTitle}
               maxLength={200}
             />
+            <Text style={styles.label}>Description</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Description"
+              placeholder="Description (optional)"
               value={description}
               onChangeText={setDescription}
               multiline
@@ -184,48 +216,104 @@ export function AddTaskModal({
               maxLength={500}
             />
 
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text>Date: {format(taskDate, 'MMM dd, yyyy')}</Text>
-            </TouchableOpacity>
+            <Text style={styles.label}>Date</Text>
+            {Platform.OS === 'ios' ? (
+              <DateTimePicker
+                value={taskDate}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            ) : (
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text>Date: {format(taskDate, 'MMM dd, yyyy')}</Text>
+              </TouchableOpacity>
+            )}
+            {Platform.OS === 'android' && showDatePicker && (
+              <DateTimePicker
+                value={taskDate}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            )}
 
-            <TouchableOpacity
-              style={styles.timeButton}
-              onPress={() => setShowStartTimePicker(true)}
-            >
-              <Text>Start Time: {format(startTime, 'hh:mm a')}</Text>
-            </TouchableOpacity>
+            <Text style={styles.label}>Start Time</Text>
+            {Platform.OS === 'ios' ? (
+              <DateTimePicker
+                value={startTime}
+                mode="time"
+                display="default"
+                onChange={handleStartTimeChange}
+              />
+            ) : (
+              <TouchableOpacity
+                style={styles.timeButton}
+                onPress={() => setShowStartTimePicker(true)}
+              >
+                <Text>Start Time: {format(startTime, 'hh:mm a')}</Text>
+              </TouchableOpacity>
+            )}
+            {Platform.OS === 'android' && showStartTimePicker && (
+              <DateTimePicker
+                value={startTime}
+                mode="time"
+                display="default"
+                onChange={handleStartTimeChange}
+              />
+            )}
 
-            <TouchableOpacity
-              style={styles.timeButton}
-              onPress={() => setShowEndTimePicker(true)}
-            >
-              <Text>End Time: {format(endTime, 'hh:mm a')}</Text>
-            </TouchableOpacity>
+            <Text style={styles.label}>End Time</Text>
+            {Platform.OS === 'ios' ? (
+              <DateTimePicker
+                value={endTime}
+                mode="time"
+                display="default"
+                onChange={handleEndTimeChange}
+              />
+            ) : (
+              <TouchableOpacity
+                style={styles.timeButton}
+                onPress={() => setShowEndTimePicker(true)}
+              >
+                <Text>End Time: {format(endTime, 'hh:mm a')}</Text>
+              </TouchableOpacity>
+            )}
+            {Platform.OS === 'android' && showEndTimePicker && (
+              <DateTimePicker
+                value={endTime}
+                mode="time"
+                display="default"
+                onChange={handleEndTimeChange}
+              />
+            )}
 
             {goals.length > 0 && (
               <View style={styles.goalSelector}>
                 <Text style={styles.label}>Select Goal (Optional)</Text>
-                <ScrollView style={styles.goalList}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <TouchableOpacity
                     style={[
                       styles.goalOption,
-                      !selectedGoal && styles.selectedGoal,
+                      (selectedGoal === '' || selectedGoal === 'no-goal') &&
+                        styles.selectedGoal,
                     ]}
-                    onPress={() => setSelectedGoal('')}
+                    onPress={() => setSelectedGoal('no-goal')}
                   >
                     <Text
                       style={[
                         styles.goalOptionText,
-                        !selectedGoal && styles.selectedGoalText,
+                        (selectedGoal === '' || selectedGoal === 'no-goal') &&
+                          styles.selectedGoalText,
                       ]}
                     >
                       No Goal
                     </Text>
                   </TouchableOpacity>
-                  {goals.map((goal) => (
+                  {goals.map(goal => (
                     <TouchableOpacity
                       key={goal.id}
                       style={[
@@ -248,167 +336,58 @@ export function AddTaskModal({
               </View>
             )}
 
-            <View style={styles.recurrenceContainer}>
-              <Text style={styles.label}>Recurrence (Optional)</Text>
-              <View style={styles.recurrenceOptions}>
-                {['daily', 'weekly', 'monthly', 'seasonal'].map((freq) => (
-                  <TouchableOpacity
-                    key={freq}
-                    style={[
-                      styles.recurrenceButton,
-                      recurrence?.frequency === freq && styles.selectedRecurrence,
-                    ]}
-                    onPress={() => {
-                      // Toggle recurrence - if already selected, deselect it
-                      if (recurrence?.frequency === freq) {
-                        setRecurrence(null);
-                      } else {
-                        setRecurrence({
-                          frequency: freq as 'daily' | 'weekly' | 'monthly' | 'seasonal',
-                          interval: 1,
-                          endDate: format(new Date(), 'yyyy-MM-dd'),
-                        });
-                      }
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.recurrenceButtonText,
-                        recurrence?.frequency === freq && styles.selectedRecurrenceText,
-                      ]}
-                    >
-                      {freq.charAt(0).toUpperCase() + freq.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+            <View style={styles.frequencyContainer}>
+              <Text style={styles.label}>Frequency</Text>
+              <TouchableOpacity
+                style={styles.frequencyButton}
+                onPress={() => setShowFrequencyModal(true)}
+              >
+                <Text style={styles.frequencyText}>
+                  {recurrence ? recurrence.frequency : 'Does not repeat'}
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {recurrence && (
+              <View>
+                <Text style={styles.label}>Ends On</Text>
+                {Platform.OS === 'ios' ? (
+                  <DateTimePicker
+                    value={new Date(recurrence.endDate)}
+                    mode="date"
+                    display="default"
+                    onChange={handleEndDateChange}
+                  />
+                ) : (
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowEndDatePicker(true)}
+                  >
+                    <Text>{format(new Date(recurrence.endDate), 'MMM dd, yyyy')}</Text>
+                  </TouchableOpacity>
+                )}
+                {Platform.OS === 'android' && showEndDatePicker && (
+                  <DateTimePicker
+                    value={new Date(recurrence.endDate)}
+                    mode="date"
+                    display="default"
+                    onChange={handleEndDateChange}
+                  />
+                )}
+              </View>
+            )}
           </ScrollView>
 
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={onClose}
-            >
-              <Text style={styles.modalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton]}
-              onPress={handleSave}
-            >
-              <Text style={styles.modalButtonText}>
-                {isEditing ? 'Update' : 'Save'}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.buttonContainer}>
+            <Button title="Cancel" onPress={onClose} variant="secondary" />
+            <Button title="Save" onPress={handleSave} />
           </View>
         </View>
-
-        {/* Date/Time Picker Modals */}
-        {Platform.OS === 'android' ? (
-          <>
-            {showDatePicker && (
-              <DateTimePicker
-                value={taskDate}
-                mode="date"
-                display="default"
-                onChange={handleDateChange}
-              />
-            )}
-            {showStartTimePicker && (
-              <DateTimePicker
-                value={startTime}
-                mode="time"
-                display="default"
-                onChange={handleStartTimeChange}
-              />
-            )}
-            {showEndTimePicker && (
-              <DateTimePicker
-                value={endTime}
-                mode="time"
-                display="default"
-                onChange={handleEndTimeChange}
-              />
-            )}
-          </>
-        ) : (
-          <>
-            {showDatePicker && (
-              <Modal
-                visible={showDatePicker}
-                transparent={true}
-                animationType="slide"
-              >
-                <View style={styles.pickerModalContainer}>
-                  <View style={styles.pickerModalContent}>
-                    <DateTimePicker
-                      value={taskDate}
-                      mode="date"
-                      display="spinner"
-                      onChange={handleDateChange}
-                    />
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => setShowDatePicker(false)}
-                    >
-                      <Text style={styles.pickerButtonText}>Done</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Modal>
-            )}
-
-            {showStartTimePicker && (
-              <Modal
-                visible={showStartTimePicker}
-                transparent={true}
-                animationType="slide"
-              >
-                <View style={styles.pickerModalContainer}>
-                  <View style={styles.pickerModalContent}>
-                    <DateTimePicker
-                      value={startTime}
-                      mode="time"
-                      display="spinner"
-                      onChange={handleStartTimeChange}
-                    />
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => setShowStartTimePicker(false)}
-                    >
-                      <Text style={styles.pickerButtonText}>Done</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Modal>
-            )}
-
-            {showEndTimePicker && (
-              <Modal
-                visible={showEndTimePicker}
-                transparent={true}
-                animationType="slide"
-              >
-                <View style={styles.pickerModalContainer}>
-                  <View style={styles.pickerModalContent}>
-                    <DateTimePicker
-                      value={endTime}
-                      mode="time"
-                      display="spinner"
-                      onChange={handleEndTimeChange}
-                    />
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => setShowEndTimePicker(false)}
-                    >
-                      <Text style={styles.pickerButtonText}>Done</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Modal>
-            )}
-          </>
-        )}
+        <FrequencyModal
+          visible={showFrequencyModal}
+          onClose={() => setShowFrequencyModal(false)}
+          onSelect={handleFrequencySelect}
+        />
       </View>
     </Modal>
   );
@@ -417,16 +396,15 @@ export function AddTaskModal({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    width: '90%',
-    maxHeight: '80%',
     backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.lg,
+    borderTopLeftRadius: theme.borderRadius.lg,
+    borderTopRightRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
+    height: '90%',
   },
   modalTitle: {
     fontSize: theme.typography.sizes.xl,
@@ -435,140 +413,82 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   scrollView: {
-    maxHeight: '80%',
+    flex: 1,
+  },
+  label: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.md,
   },
   input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
     fontSize: theme.typography.sizes.md,
     color: theme.colors.text.primary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
   },
   dateButton: {
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
     alignItems: 'center',
+    marginBottom: theme.spacing.md,
   },
   timeButton: {
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
     alignItems: 'center',
+    marginBottom: theme.spacing.md,
   },
   goalSelector: {
-    marginBottom: theme.spacing.lg,
-  },
-  label: {
-    fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.medium,
-    marginBottom: theme.spacing.sm,
-    color: theme.colors.text.primary,
+    marginTop: theme.spacing.md,
   },
   goalList: {
-    maxHeight: 150,
+    flexDirection: 'row',
   },
   goalOption: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.sm,
+    borderColor: theme.colors.primary,
+    marginRight: theme.spacing.sm,
   },
   selectedGoal: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
   },
   goalOptionText: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.primary,
+    color: theme.colors.primary,
+    fontWeight: theme.typography.weights.medium,
   },
   selectedGoalText: {
     color: theme.colors.text.inverse,
   },
-  recurrenceContainer: {
-    marginBottom: theme.spacing.lg,
+  frequencyContainer: {
+    marginTop: theme.spacing.md,
   },
-  recurrenceOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  recurrenceButton: {
-    padding: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
+  frequencyButton: {
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.md,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  selectedRecurrence: {
-    backgroundColor: theme.colors.primary,
-  },
-  recurrenceButtonText: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.sizes.sm,
-  },
-  selectedRecurrenceText: {
-    color: theme.colors.text.inverse,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: theme.spacing.lg,
-  },
-  modalButton: {
-    flex: 1,
     padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginHorizontal: theme.spacing.sm,
+    alignItems: 'center',
   },
-  cancelButton: {
-    backgroundColor: theme.colors.danger,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  modalButtonText: {
-    color: theme.colors.text.inverse,
+  frequencyText: {
     fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.bold,
-    textAlign: 'center',
+    color: theme.colors.text.primary,
   },
-  pickerModalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  pickerModalContent: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    width: '90%',
-    alignItems: 'center',
-  },
-  pickerButton: {
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     marginTop: theme.spacing.lg,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.md,
-    width: '100%',
-  },
-  pickerButtonText: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.bold,
-    textAlign: 'center',
   },
 }); 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, Alert, Platform, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Feather } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../theme';
 import { Section } from '../components/Section';
@@ -22,7 +23,7 @@ export const SurveyScreen = () => {
   const [surveyData, setSurveyData] = useState<UserPreferences>({
     wakeUpTime: new Date(2024, 0, 1, 7, 0), // Default 7:00 AM
     sleepTime: new Date(2024, 0, 1, 22, 0), // Default 10:00 PM
-    hasWorkSchedule: false,
+    hasWorkSchedule: true,
     workSchedule: {},
   });
   // For new work schedule UI
@@ -151,7 +152,7 @@ export const SurveyScreen = () => {
   };
 
   const renderStep1 = () => (
-    <Section title="Welcome to Calendar AI" style={sharedStyles.sectionWithMargin}>
+    <Section title="Welcome to Calendar AI" style={sharedStyles.sectionWithMargin} flexContent>
       <ScrollView contentContainerStyle={sharedStyles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={sharedStyles.stepContainer}>
           <Text style={sharedStyles.description}>
@@ -256,10 +257,10 @@ export const SurveyScreen = () => {
 
   // NEW: Work schedule day/time selection
   const renderStep3 = () => (
-    <Section title="Work Schedule Details" style={sharedStyles.sectionWithMargin}>
+    <Section title="Work Schedule Details" style={sharedStyles.sectionWithMargin} flexContent>
       <ScrollView contentContainerStyle={sharedStyles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={sharedStyles.stepContainer}>
-          <Text style={sharedStyles.description}>
+          <Text style={[sharedStyles.description, { marginBottom: theme.spacing.lg }]}>
             Select your work/study days and set the time for all selected days:
           </Text>
           <View style={sharedStyles.daysRow}>
@@ -270,10 +271,15 @@ export const SurveyScreen = () => {
                 onPress={() => toggleDay(idx)}
                 variant={selectedDays.includes(idx) ? 'primary' : 'secondary'}
                 style={sharedStyles.dayButton}
+                icon={
+                  selectedDays.includes(idx) ? (
+                    <Feather name="check" size={16} color={theme.colors.text.inverse} />
+                  ) : undefined
+                }
               />
             ))}
           </View>
-          <View style={sharedStyles.questionContainer}>
+          <View style={[sharedStyles.questionContainer, { marginBottom: theme.spacing.md }]}>
             <Text style={sharedStyles.question}>Start Time</Text>
             {Platform.OS === 'android' ? (
               <TouchableOpacity 
@@ -306,7 +312,7 @@ export const SurveyScreen = () => {
               />
             )}
           </View>
-          <View style={sharedStyles.questionContainer}>
+          <View style={[sharedStyles.questionContainer, { marginBottom: theme.spacing.md }]}>
             <Text style={sharedStyles.question}>End Time</Text>
             {Platform.OS === 'android' ? (
               <TouchableOpacity 
@@ -345,7 +351,7 @@ export const SurveyScreen = () => {
   );
 
   const renderStep4 = () => (
-    <Section title="Review Your Preferences" style={sharedStyles.sectionWithMargin}>
+    <Section title="Review Your Preferences" style={sharedStyles.sectionWithMargin} flexContent>
       <ScrollView contentContainerStyle={sharedStyles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={sharedStyles.stepContainer}>
           <Text style={sharedStyles.description}>
@@ -399,7 +405,7 @@ export const SurveyScreen = () => {
       {currentStep === 2 && renderStep2()}
       {currentStep === 3 && surveyData.hasWorkSchedule && renderStep3()}
       {currentStep === 4 && renderStep4()}
-      <View style={sharedStyles.buttonContainerFixed}>
+      <View style={[sharedStyles.buttonContainerFixed, currentStep === 1 && { justifyContent: 'flex-end' }]}>
         {currentStep > 1 && (
           <Button
             title="Back"

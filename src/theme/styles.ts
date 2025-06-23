@@ -335,6 +335,7 @@ export const sharedStyles = StyleSheet.create({
     paddingBottom: theme.spacing.xl,
   },
   sectionWithMargin: {
+    paddingTop: theme.spacing.xl,
     marginTop: theme.spacing.xl,
   },
   stepContainer: {
@@ -369,6 +370,12 @@ export const sharedStyles = StyleSheet.create({
   timePicker: {
     minWidth: 220,
     alignSelf: 'center',
+  },
+  footer: {
+    padding: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
   },
   buttonContainerFixed: {
     flexDirection: 'row',

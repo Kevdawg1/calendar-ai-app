@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -7,11 +7,43 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { sharedStyles } from '../theme/styles';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
+import { OnboardingModal } from '../components/OnboardingModal';
+import { userPreferencesService } from '../services/userPreferencesService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
+const IS_FIRST_TIME_USER_KEY = '@is_first_time_user';
+
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const surveyCompleted = await userPreferencesService.isSurveyCompleted();
+        const isFirstTimeUser = await AsyncStorage.getItem(IS_FIRST_TIME_USER_KEY);
+
+        if (surveyCompleted && isFirstTimeUser !== 'false') {
+          setShowOnboarding(true);
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, []);
+
+  const handleOnboardingClose = async () => {
+    try {
+      await AsyncStorage.setItem(IS_FIRST_TIME_USER_KEY, 'false');
+      setShowOnboarding(false);
+    } catch (error) {
+      console.error('Error saving onboarding status:', error);
+    }
+  };
 
   const menuItems = [
     {
@@ -59,6 +91,10 @@ const HomeScreen = () => {
           ))}
         </View>
       </Section>
+      <OnboardingModal
+        isVisible={showOnboarding}
+        onClose={handleOnboardingClose}
+      />
     </View>
   );
 };
