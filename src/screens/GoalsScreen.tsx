@@ -15,6 +15,11 @@ import { EmptyState } from '../components/EmptyState';
 import { Button as CustomButton } from '../components/Button';
 import { userPreferencesService, UserPreferences } from '../services/userPreferencesService';
 import { taskService } from '../services/taskService';
+import { GoalForm } from '../components/GoalForm';
+import { EditGoalModal } from '../components/EditGoalModal';
+import { InfoModal } from '../components/InfoModal';
+import { WeeklyTimeBalance } from '../components/WeeklyTimeBalance';
+import { GoalCard } from '../components/GoalCard';
 
 const GOAL_COLORS = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#5AC8FA', '#FFD60A'];
 
@@ -40,6 +45,13 @@ export const GoalsScreen = () => {
   const [remainingHours, setRemainingHours] = useState<number>(0);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [infoContent, setInfoContent] = useState<{ title: string; content: string }>({ title: '', content: '' });
+  const [breakdown, setBreakdown] = useState({
+    availableHours: 0,
+    weeklyAvailableHours: 0,
+    workHours: 0,
+    taskHours: 0,
+    remaining: 0,
+  });
 
   useEffect(() => {
     loadGoals();
@@ -119,6 +131,13 @@ export const GoalsScreen = () => {
 
       const remaining = weeklyAvailableHours - workHours - taskHours;
       setRemainingHours(Math.max(0, remaining));
+      setBreakdown({
+        availableHours,
+        weeklyAvailableHours,
+        workHours,
+        taskHours,
+        remaining: Math.max(0, remaining),
+      });
     } catch (error) {
       console.error('Error calculating remaining hours:', error);
     }
@@ -234,323 +253,13 @@ export const GoalsScreen = () => {
     }
   };
 
-  const renderColorPicker = (color: string, setColor: (c: string) => void) => (
-    <View style={{ flexDirection: 'row', marginVertical: 8 }}>
-      {GOAL_COLORS.map((c) => (
-        <TouchableOpacity
-          key={c}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 16,
-            backgroundColor: c,
-            marginHorizontal: 6,
-            borderWidth: color === c ? 3 : 1,
-            borderColor: color === c ? theme.colors.primary : '#ccc',
-          }}
-          onPress={() => setColor(c)}
-        />
-      ))}
-    </View>
-  );
-
-  const renderInfoButton = (onPress: () => void) => (
-    <TouchableOpacity
-      onPress={onPress}
-      style={{
-        marginLeft: 8,
-        padding: 4,
-      }}
-    >
-      <Ionicons name="information-circle-outline" size={20} color={theme.colors.primary} />
-    </TouchableOpacity>
-  );
-
-  const renderGoalForm = () => (
-    <View style={sharedStyles.inputContainer}>
-      <TextInput
-        style={sharedStyles.input}
-        value={newGoalText}
-        onChangeText={setNewGoalText}
-        placeholder="Enter your goal"
-        multiline
-        maxLength={200}
-      />
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text style={sharedStyles.sectionLabel}>Goal Type</Text>
-        {renderInfoButton(() => showInfoModal(
-          'Goal Type',
-          '• Short Term: 1-3 months\n• Medium Term: 3-12 months\n• Long Term: 1-5 years'
-        ))}
-      </View>
-      <View style={sharedStyles.formSectionWide}>
-        <View style={sharedStyles.typeContainerRow}>
-          <TouchableOpacity
-            style={[
-              sharedStyles.typeButton,
-              selectedType === 'short' && sharedStyles.selectedType,
-            ]}
-            onPress={() => setSelectedType('short')}
-          >
-            <Text style={selectedType === 'short' ? sharedStyles.selectedTypeText : sharedStyles.typeText}>Short Term</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              sharedStyles.typeButton,
-              selectedType === 'medium' && sharedStyles.selectedType,
-            ]}
-            onPress={() => setSelectedType('medium')}
-          >
-            <Text style={selectedType === 'medium' ? sharedStyles.selectedTypeText : sharedStyles.typeText}>Medium Term</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              sharedStyles.typeButton,
-              selectedType === 'long' && sharedStyles.selectedType,
-            ]}
-            onPress={() => setSelectedType('long')}
-          >
-            <Text style={selectedType === 'long' ? sharedStyles.selectedTypeText : sharedStyles.typeText}>Long Term</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text style={sharedStyles.sectionLabel}>Priority Level</Text>
-        {renderInfoButton(() => showInfoModal(
-          'Priority Level',
-          '• Low: Nice to have, can be delayed\n• Medium: Important but flexible\n• High: Critical, must be completed'
-        ))}
-      </View>
-      <View style={sharedStyles.formSectionWide}>
-        <View style={sharedStyles.typeContainerRow}>
-          <TouchableOpacity
-            style={[
-              sharedStyles.priorityButton,
-              selectedPriority === 'low' && sharedStyles.selectedPriority,
-            ]}
-            onPress={() => setSelectedPriority('low')}
-          >
-            <Text style={selectedPriority === 'low' ? sharedStyles.selectedPriorityText : sharedStyles.priorityText}>Low</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              sharedStyles.priorityButton,
-              selectedPriority === 'medium' && sharedStyles.selectedPriority,
-            ]}
-            onPress={() => setSelectedPriority('medium')}
-          >
-            <Text style={selectedPriority === 'medium' ? sharedStyles.selectedPriorityText : sharedStyles.priorityText}>Medium</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              sharedStyles.priorityButton,
-              selectedPriority === 'high' && sharedStyles.selectedPriority,
-            ]}
-            onPress={() => setSelectedPriority('high')}
-          >
-            <Text style={selectedPriority === 'high' ? sharedStyles.selectedPriorityText : sharedStyles.priorityText}>High</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <Text style={sharedStyles.sectionLabel}>Color</Text>
-      {renderColorPicker(selectedColor, setSelectedColor)}
-      <Text style={sharedStyles.sectionLabel}>Time Commitment (hours per week)</Text>
-      <TextInput
-        style={sharedStyles.input}
-        value={timeCommitment}
-        onChangeText={setTimeCommitment}
-        keyboardType="numeric"
-        placeholder="Enter hours per week"
-      />
-      <CustomButton
-        title="Add Goal"
-        onPress={handleAddGoal}
-        style={sharedStyles.button}
-      />
-    </View>
-  );
-
-  const renderEditGoalModal = () => (
-    <Modal
-      visible={editModalVisible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setEditModalVisible(false)}
-    >
-      <View style={sharedStyles.modalContainer}>
-        <View style={sharedStyles.modalContent}>
-          <Text style={sharedStyles.modalTitle}>Edit Goal</Text>
-          <Text style={sharedStyles.label}>Title</Text>
-          <TextInput
-            style={[sharedStyles.input, { backgroundColor: '#f0f0f0' }]}
-            value={editGoal?.text || ''}
-            editable={false}
-          />
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={sharedStyles.sectionLabel}>Goal Type</Text>
-            {renderInfoButton(() => showInfoModal(
-              'Goal Type',
-              '• Short Term: 1-3 months\n• Medium Term: 3-12 months\n• Long Term: 1-5 years'
-            ))}
-          </View>
-          <View style={sharedStyles.formSectionWide}>
-            <View style={sharedStyles.typeContainerRow}>
-              <TouchableOpacity
-                style={[
-                  sharedStyles.typeButton,
-                  editType === 'short' && sharedStyles.selectedType,
-                ]}
-                onPress={() => setEditType('short')}
-              >
-                <Text style={editType === 'short' ? sharedStyles.selectedTypeText : sharedStyles.typeText}>Short Term</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  sharedStyles.typeButton,
-                  editType === 'medium' && sharedStyles.selectedType,
-                ]}
-                onPress={() => setEditType('medium')}
-              >
-                <Text style={editType === 'medium' ? sharedStyles.selectedTypeText : sharedStyles.typeText}>Medium Term</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  sharedStyles.typeButton,
-                  editType === 'long' && sharedStyles.selectedType,
-                ]}
-                onPress={() => setEditType('long')}
-              >
-                <Text style={editType === 'long' ? sharedStyles.selectedTypeText : sharedStyles.typeText}>Long Term</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={sharedStyles.sectionLabel}>Priority Level</Text>
-            {renderInfoButton(() => showInfoModal(
-              'Priority Level',
-              '• Low: Nice to have, can be delayed\n• Medium: Important but flexible\n• High: Critical, must be completed'
-            ))}
-          </View>
-          <View style={sharedStyles.formSectionWide}>
-            <View style={sharedStyles.typeContainerRow}>
-              <TouchableOpacity
-                style={[
-                  sharedStyles.priorityButton,
-                  editPriority === 'low' && sharedStyles.selectedPriority,
-                ]}
-                onPress={() => setEditPriority('low')}
-              >
-                <Text style={editPriority === 'low' ? sharedStyles.selectedPriorityText : sharedStyles.priorityText}>Low</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  sharedStyles.priorityButton,
-                  editPriority === 'medium' && sharedStyles.selectedPriority,
-                ]}
-                onPress={() => setEditPriority('medium')}
-              >
-                <Text style={editPriority === 'medium' ? sharedStyles.selectedPriorityText : sharedStyles.priorityText}>Medium</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  sharedStyles.priorityButton,
-                  editPriority === 'high' && sharedStyles.selectedPriority,
-                ]}
-                onPress={() => setEditPriority('high')}
-              >
-                <Text style={editPriority === 'high' ? sharedStyles.selectedPriorityText : sharedStyles.priorityText}>High</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <Text style={sharedStyles.sectionLabel}>Color</Text>
-          {renderColorPicker(editColor, setEditColor)}
-          <Text style={sharedStyles.sectionLabel}>Time Commitment (hours per week)</Text>
-          <TextInput
-            style={sharedStyles.input}
-            value={editTimeCommitment}
-            onChangeText={setEditTimeCommitment}
-            keyboardType="numeric"
-            placeholder="Enter hours per week"
-          />
-          <View style={sharedStyles.modalButtons}>
-            <TouchableOpacity
-              style={[sharedStyles.modalButton, sharedStyles.cancelButton]}
-              onPress={() => setEditModalVisible(false)}
-            >
-              <Text style={sharedStyles.modalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[sharedStyles.modalButton, sharedStyles.saveButton]}
-              onPress={handleSaveEditGoal}
-            >
-              <Text style={sharedStyles.modalButtonText}>Save</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const renderInfoModal = () => (
-    <Modal
-      visible={infoModalVisible}
-      animationType="fade"
-      transparent={true}
-      onRequestClose={() => setInfoModalVisible(false)}
-    >
-      <View style={sharedStyles.modalContainer}>
-        <View style={[sharedStyles.modalContent, { maxWidth: 300 }]}>
-          <Text style={sharedStyles.modalTitle}>{infoContent.title}</Text>
-          <Text style={[sharedStyles.cardText, { lineHeight: 24, marginBottom: 20 }]}>
-            {infoContent.content}
-          </Text>
-          <TouchableOpacity
-            style={[sharedStyles.modalButton, sharedStyles.saveButton]}
-            onPress={() => setInfoModalVisible(false)}
-          >
-            <Text style={sharedStyles.modalButtonText}>Got it</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
   const renderGoalItem = ({ item }: { item: Goal }) => (
-    <View style={[sharedStyles.card, { borderLeftWidth: 6, borderLeftColor: item.color }] }>
-      <View style={sharedStyles.cardHeader}>
-        <Text style={sharedStyles.cardTitle}>{item.text}</Text>
-        <View style={{ flexDirection: 'row' }}>
-          <TouchableOpacity
-            onPress={() => handleEditGoal(item)}
-            style={sharedStyles.deleteButton}
-          >
-            <Ionicons name="create-outline" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleDeleteGoal(item.id)}
-            style={sharedStyles.deleteButton}
-          >
-            <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={sharedStyles.cardContent}>
-        <Text style={sharedStyles.cardText}>
-          Type: {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-        </Text>
-        <Text style={sharedStyles.cardText}>
-          Priority: {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
-        </Text>
-        <Text style={sharedStyles.cardText}>
-          Time Commitment: {item.timeCommitment} hours/week
-        </Text>
-      </View>
-      <CustomButton
-        title="Generate Tasks"
-        onPress={() => handleGenerateTasks(item)}
-        style={sharedStyles.button}
-      />
-    </View>
+    <GoalCard
+      goal={item}
+      onEdit={handleEditGoal}
+      onDelete={handleDeleteGoal}
+      onGenerateTasks={handleGenerateTasks}
+    />
   );
 
   return (
@@ -563,23 +272,31 @@ export const GoalsScreen = () => {
       )}
       <ScrollView style={sharedStyles.content}>
         <Section title="Add New Goal">
-          {renderGoalForm()}
+          <GoalForm
+            goalText={newGoalText}
+            onGoalTextChange={setNewGoalText}
+            selectedType={selectedType}
+            onTypeSelect={setSelectedType}
+            selectedPriority={selectedPriority}
+            onPrioritySelect={setSelectedPriority}
+            selectedColor={selectedColor}
+            onColorSelect={setSelectedColor}
+            timeCommitment={timeCommitment}
+            onTimeCommitmentChange={setTimeCommitment}
+            onTypeInfoPress={() => showInfoModal(
+              'Goal Type',
+              '• Short Term: 1-3 months\n• Medium Term: 3-12 months\n• Long Term: 1-5 years'
+            )}
+            onPriorityInfoPress={() => showInfoModal(
+              'Priority Level',
+              '• Low: Nice to have, can be delayed\n• Medium: Important but flexible\n• High: Critical, must be completed'
+            )}
+            onSubmit={handleAddGoal}
+          />
         </Section>
         <Section title="Your Goals">
           {userPreferences && (
-            <View style={[sharedStyles.card, { marginBottom: 16, backgroundColor: theme.colors.background }]}>
-              <Text style={[sharedStyles.cardTitle, { color: theme.colors.primary, marginBottom: 8 }]}>
-                Weekly Time Balance
-              </Text>
-              <Text style={sharedStyles.cardText}>
-                Remaining hours this week: <Text style={{ fontWeight: 'bold', color: remainingHours > 0 ? theme.colors.success : theme.colors.danger }}>
-                  {remainingHours.toFixed(1)} hours
-                </Text>
-              </Text>
-              <Text style={[sharedStyles.cardText, { fontSize: 12, color: theme.colors.text.secondary, marginTop: 4 }]}>
-                Based on your sleep schedule, work hours, and existing tasks
-              </Text>
-            </View>
+            <WeeklyTimeBalance remainingHours={remainingHours} breakdown={breakdown} />
           )}
           {goals.length === 0 ? (
             <EmptyState
@@ -597,8 +314,36 @@ export const GoalsScreen = () => {
           )}
         </Section>
       </ScrollView>
-      {renderEditGoalModal()}
-      {renderInfoModal()}
+      
+      <EditGoalModal
+        visible={editModalVisible}
+        goal={editGoal}
+        editType={editType}
+        onTypeSelect={setEditType}
+        editPriority={editPriority}
+        onPrioritySelect={setEditPriority}
+        editColor={editColor}
+        onColorSelect={setEditColor}
+        editTimeCommitment={editTimeCommitment}
+        onTimeCommitmentChange={setEditTimeCommitment}
+        onTypeInfoPress={() => showInfoModal(
+          'Goal Type',
+          '• Short Term: 1-3 months\n• Medium Term: 3-12 months\n• Long Term: 1-5 years'
+        )}
+        onPriorityInfoPress={() => showInfoModal(
+          'Priority Level',
+          '• Low: Nice to have, can be delayed\n• Medium: Important but flexible\n• High: Critical, must be completed'
+        )}
+        onSave={handleSaveEditGoal}
+        onCancel={() => setEditModalVisible(false)}
+      />
+      
+      <InfoModal
+        visible={infoModalVisible}
+        title={infoContent.title}
+        content={infoContent.content}
+        onClose={() => setInfoModalVisible(false)}
+      />
     </View>
   );
 }; 
