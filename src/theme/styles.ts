@@ -5,6 +5,10 @@ export const sharedStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  safeAreaContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
     padding: theme.spacing.md,
   },
   header: {
@@ -507,6 +511,7 @@ export const sharedStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...theme.shadows.md,
+    zIndex: 1000,
   },
   cardContentRow: {
     flexDirection: 'row',

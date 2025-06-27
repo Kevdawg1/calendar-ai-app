@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Alert, Platform, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Feather } from '@expo/vector-icons';
@@ -144,7 +145,11 @@ export const SurveyScreen = () => {
   const handleSubmit = async () => {
     try {
       await userPreferencesService.savePreferences(surveyData);
-      navigation.replace('Home');
+      // Navigate to Home and reset the navigation stack to make Home the root
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      });
     } catch (error) {
       console.error('Error saving survey data:', error);
       Alert.alert('Error', 'Failed to save survey data. Please try again.');
@@ -152,7 +157,7 @@ export const SurveyScreen = () => {
   };
 
   const renderStep1 = () => (
-    <Section title="Welcome to Calendar AI" style={sharedStyles.sectionWithMargin} flexContent>
+    <Section title="Welcome to AI-Cal" style={sharedStyles.sectionWithMargin} flexContent>
       <ScrollView contentContainerStyle={sharedStyles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={sharedStyles.stepContainer}>
           <Text style={sharedStyles.description}>
@@ -400,25 +405,27 @@ export const SurveyScreen = () => {
   );
 
   return (
-    <View style={sharedStyles.surveyContainer}>
-      {currentStep === 1 && renderStep1()}
-      {currentStep === 2 && renderStep2()}
-      {currentStep === 3 && surveyData.hasWorkSchedule && renderStep3()}
-      {currentStep === 4 && renderStep4()}
-      <View style={[sharedStyles.buttonContainerFixed, currentStep === 1 && { justifyContent: 'flex-end' }]}>
-        {currentStep > 1 && (
+    <SafeAreaView style={sharedStyles.container}>
+      <View style={sharedStyles.safeAreaContainer}>
+        {currentStep === 1 && renderStep1()}
+        {currentStep === 2 && renderStep2()}
+        {currentStep === 3 && surveyData.hasWorkSchedule && renderStep3()}
+        {currentStep === 4 && renderStep4()}
+        <View style={[sharedStyles.buttonContainerFixed, currentStep === 1 && { justifyContent: 'flex-end' }]}>
+          {currentStep > 1 && (
+            <Button
+              title="Back"
+              onPress={handleBack}
+              style={sharedStyles.button}
+            />
+          )}
           <Button
-            title="Back"
-            onPress={handleBack}
+            title={currentStep === 4 ? "Complete Setup" : "Next"}
+            onPress={handleNext}
             style={sharedStyles.button}
           />
-        )}
-        <Button
-          title={currentStep === 4 ? "Complete Setup" : "Next"}
-          onPress={handleNext}
-          style={sharedStyles.button}
-        />
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }; 

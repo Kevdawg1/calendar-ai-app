@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -151,34 +152,36 @@ export const TaskReviewScreen = () => {
   );
 
   return (
-    <View style={sharedStyles.container}>
-      <ScrollView 
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingHorizontal: theme.spacing.md,
-          paddingTop: theme.spacing.md,
-          paddingBottom: theme.spacing.xl,
-        }}
-        showsVerticalScrollIndicator={true}
-        bounces={true}
-      >
-        {tasks.map(renderTaskItem)}
-      </ScrollView>
-
-      {showAddTaskModal && (
-        <AddTaskModal
-          isVisible={showAddTaskModal}
-          onClose={() => {
-            setShowAddTaskModal(false);
-            setEditingTask(null);
+    <SafeAreaView style={sharedStyles.container}>
+      <View style={sharedStyles.safeAreaContainer}>
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: theme.spacing.md,
+            paddingTop: theme.spacing.md,
+            paddingBottom: theme.spacing.xl,
           }}
-          onSubmit={handleSaveTask}
-          goals={goals}
-          selectedDate={editingTask?.startDate || new Date().toISOString().split('T')[0]}
-          taskToEdit={editingTask || undefined}
-          isEditing={!!editingTask}
-        />
-      )}
-    </View>
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+        >
+          {tasks.map(renderTaskItem)}
+        </ScrollView>
+
+        {showAddTaskModal && (
+          <AddTaskModal
+            isVisible={showAddTaskModal}
+            onClose={() => {
+              setShowAddTaskModal(false);
+              setEditingTask(null);
+            }}
+            onSubmit={handleSaveTask}
+            goals={goals}
+            selectedDate={editingTask?.startDate || new Date().toISOString().split('T')[0]}
+            taskToEdit={editingTask || undefined}
+            isEditing={!!editingTask}
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 }; 

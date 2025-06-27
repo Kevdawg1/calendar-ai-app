@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -203,86 +204,88 @@ export const LifeAdminScreen = () => {
   };
 
   return (
-    <View style={sharedStyles.container}>
-      <View style={sharedStyles.header}>
-        <Button
-          title="Collapse All"
-          onPress={handleCollapseAll}
-          style={sharedStyles.button}
-        />
-      </View>
-
-      {isLoading && (
-        <View style={sharedStyles.loadingOverlay}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={sharedStyles.loadingText}>{loadingStage}</Text>
+    <SafeAreaView style={sharedStyles.container}>
+      <View style={sharedStyles.safeAreaContainer}>
+        <View style={sharedStyles.header}>
+          <Button
+            title="Collapse All"
+            onPress={handleCollapseAll}
+            style={sharedStyles.button}
+          />
         </View>
-      )}
 
-      <ScrollView style={sharedStyles.content}>
-        <Section title="">
-          <Text style={sharedStyles.emptyStateText}>
-            Manage your recurring life admin tasks. Select the tasks you want to schedule in your calendar.
-          </Text>
+        {isLoading && (
+          <View style={sharedStyles.loadingOverlay}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={sharedStyles.loadingText}>{loadingStage}</Text>
+          </View>
+        )}
 
-          {categories.map((category) => {
-            const categoryTasks = tasks.filter(task => task.category === category);
-            const selectedCategoryTasks = categoryTasks.filter(task => selectedTasks.has(task.id));
-            const isAllSelected = categoryTasks.length > 0 && selectedCategoryTasks.length === categoryTasks.length;
-            const isPartiallySelected = selectedCategoryTasks.length > 0 && selectedCategoryTasks.length < categoryTasks.length;
+        <ScrollView style={sharedStyles.content}>
+          <Section title="">
+            <Text style={sharedStyles.emptyStateText}>
+              Manage your recurring life admin tasks. Select the tasks you want to schedule in your calendar.
+            </Text>
 
-            return (
-              <CategorySection
-                key={category}
-                category={category}
-                isExpanded={expandedCategories.has(category)}
-                isAllSelected={isAllSelected}
-                isPartiallySelected={isPartiallySelected}
-                onToggle={toggleCategory}
-                onToggleAll={toggleCategoryAll}
-              >
-                {categoryTasks.map((task) => (
-                  <LifeAdminTaskItem
-                    key={task.id}
-                    task={task}
-                    isSelected={selectedTasks.has(task.id)}
-                    isScheduled={scheduledTasks.has(task.title)}
-                    onToggle={toggleTask}
-                    onFrequencyPress={(task) => {
-                      setEditingTask(task);
-                      setShowFrequencyModal(true);
-                    }}
-                  />
-                ))}
-              </CategorySection>
-            );
-          })}
-        </Section>
-      </ScrollView>
+            {categories.map((category) => {
+              const categoryTasks = tasks.filter(task => task.category === category);
+              const selectedCategoryTasks = categoryTasks.filter(task => selectedTasks.has(task.id));
+              const isAllSelected = categoryTasks.length > 0 && selectedCategoryTasks.length === categoryTasks.length;
+              const isPartiallySelected = selectedCategoryTasks.length > 0 && selectedCategoryTasks.length < categoryTasks.length;
 
-      <View style={sharedStyles.footer}>
-        <Button
-          title="Schedule Life Admin Tasks"
-          onPress={handleScheduleTasks}
-          style={sharedStyles.button}
-          disabled={isLoading}
-        />
+              return (
+                <CategorySection
+                  key={category}
+                  category={category}
+                  isExpanded={expandedCategories.has(category)}
+                  isAllSelected={isAllSelected}
+                  isPartiallySelected={isPartiallySelected}
+                  onToggle={toggleCategory}
+                  onToggleAll={toggleCategoryAll}
+                >
+                  {categoryTasks.map((task) => (
+                    <LifeAdminTaskItem
+                      key={task.id}
+                      task={task}
+                      isSelected={selectedTasks.has(task.id)}
+                      isScheduled={scheduledTasks.has(task.title)}
+                      onToggle={toggleTask}
+                      onFrequencyPress={(task) => {
+                        setEditingTask(task);
+                        setShowFrequencyModal(true);
+                      }}
+                    />
+                  ))}
+                </CategorySection>
+              );
+            })}
+          </Section>
+        </ScrollView>
+
+        <View style={sharedStyles.footer}>
+          <Button
+            title="Schedule Life Admin Tasks"
+            onPress={handleScheduleTasks}
+            style={sharedStyles.button}
+            disabled={isLoading}
+          />
+        </View>
+
+        {editingTask && (
+          <FrequencyModal
+            visible={showFrequencyModal}
+            onClose={() => {
+              setShowFrequencyModal(false);
+              setEditingTask(null);
+            }}
+            onSelect={(frequency) => {
+              if (editingTask) {
+                handleFrequencySelect(editingTask, frequency);
+              }
+            }}
+          />
+        )}
       </View>
-
-      {editingTask && (
-        <FrequencyModal
-          visible={showFrequencyModal}
-          onClose={() => {
-            setShowFrequencyModal(false);
-            setEditingTask(null);
-          }}
-          onSelect={(frequency) => {
-            if (editingTask) {
-              handleFrequencySelect(editingTask, frequency);
-            }
-          }}
-        />
-      )}
-    </View>
+    </SafeAreaView>
   );
 }; 

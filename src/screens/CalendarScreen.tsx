@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -425,117 +426,119 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   };
 
   return (
-    <View style={sharedStyles.container}>
-      {isCalendarVisible && (
-        <>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={[sharedStyles.header, { marginBottom: 0 }]}>Calendar</Text>
-            <TouchableOpacity style={styles.headerButton} onPress={handleTodayPress}>
-              <Text style={styles.headerButtonText}>Today</Text>
-            </TouchableOpacity>
+    <SafeAreaView style={sharedStyles.container}>
+      <View style={sharedStyles.safeAreaContainer}>
+        {isCalendarVisible && (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={[sharedStyles.header, { marginBottom: 0 }]}>Calendar</Text>
+              <TouchableOpacity style={styles.headerButton} onPress={handleTodayPress}>
+                <Text style={styles.headerButtonText}>Today</Text>
+              </TouchableOpacity>
+            </View>
+            <Calendar
+              key={calendarKey}
+              current={currentMonth}
+              onMonthChange={handleMonthChange}
+              onDayPress={handleDayPress}
+              markedDates={getMarkedDates(tasks)}
+              markingType="multi-dot"
+              theme={{
+                todayTextColor: theme.colors.primary,
+                selectedDayBackgroundColor: theme.colors.primary,
+                selectedDayTextColor: '#fff',
+                dotColor: theme.colors.primary,
+                selectedDotColor: '#fff',
+                arrowColor: theme.colors.primary,
+                dotStyle: {
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  marginTop: 2,
+                },
+                // @ts-ignore
+                'stylesheet.calendar.main': {
+                  container: {
+                    paddingLeft: 5,
+                    paddingRight: 5,
+                  },
+                  dayContainer: {
+                    width: 32,
+                    height: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                  selected: {
+                    backgroundColor: theme.colors.primary,
+                    borderRadius: 16,
+                    width: 32,
+                    height: 32,
+                  },
+                  today: {
+                    backgroundColor: 'transparent',
+                  },
+                  todayText: {
+                    color: theme.colors.primary,
+                  },
+                },
+                // @ts-ignore
+                'stylesheet.calendar.header': {
+                  dayTextAtIndex0: {
+                    color: theme.colors.primary,
+                  },
+                },
+              }}
+            />
+          </>
+        )}
+
+        <ScrollView
+          ref={scrollViewRef}
+          style={[sharedStyles.content, !isCalendarVisible && { flex: 1 }]}
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
+          <View style={sharedStyles.header}>
+            <Text style={sharedStyles.header}>
+              {format(parseISO(selectedDate), 'EEEE, MMMM d, yyyy')}
+            </Text>
           </View>
-          <Calendar
-            key={calendarKey}
-            current={currentMonth}
-            onMonthChange={handleMonthChange}
-            onDayPress={handleDayPress}
-            markedDates={getMarkedDates(tasks)}
-            markingType="multi-dot"
-            theme={{
-              todayTextColor: theme.colors.primary,
-              selectedDayBackgroundColor: theme.colors.primary,
-              selectedDayTextColor: '#fff',
-              dotColor: theme.colors.primary,
-              selectedDotColor: '#fff',
-              arrowColor: theme.colors.primary,
-              dotStyle: {
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                marginTop: 2,
-              },
-              // @ts-ignore
-              'stylesheet.calendar.main': {
-                container: {
-                  paddingLeft: 5,
-                  paddingRight: 5,
-                },
-                dayContainer: {
-                  width: 32,
-                  height: 32,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                },
-                selected: {
-                  backgroundColor: theme.colors.primary,
-                  borderRadius: 16,
-                  width: 32,
-                  height: 32,
-                },
-                today: {
-                  backgroundColor: 'transparent',
-                },
-                todayText: {
-                  color: theme.colors.primary,
-                },
-              },
-              // @ts-ignore
-              'stylesheet.calendar.header': {
-                dayTextAtIndex0: {
-                  color: theme.colors.primary,
-                },
-              },
-            }}
+
+          <TimeGrid
+            tasks={getTasksForDate(selectedDate)}
+            onTaskPress={handleTaskPress}
+            onTaskDelete={handleDeleteTask}
+            onStatusChange={handleStatusChange}
+            getGoalText={getGoalText}
+            getGoalColor={getGoalColor}
           />
-        </>
-      )}
+        </ScrollView>
 
-      <ScrollView
-        ref={scrollViewRef}
-        style={[sharedStyles.content, !isCalendarVisible && { flex: 1 }]}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
-        <View style={sharedStyles.header}>
-          <Text style={sharedStyles.header}>
-            {format(parseISO(selectedDate), 'EEEE, MMMM d, yyyy')}
-          </Text>
-        </View>
+        <TouchableOpacity
+          style={sharedStyles.fab}
+          onPress={() => setIsAddTaskModalVisible(true)}
+          accessibilityLabel="Add Task"
+        >
+          <Ionicons name="add" size={32} color="#fff" />
+        </TouchableOpacity>
 
-        <TimeGrid
-          tasks={getTasksForDate(selectedDate)}
-          onTaskPress={handleTaskPress}
-          onTaskDelete={handleDeleteTask}
-          onStatusChange={handleStatusChange}
-          getGoalText={getGoalText}
-          getGoalColor={getGoalColor}
-        />
-      </ScrollView>
-
-      <TouchableOpacity
-        style={sharedStyles.fab}
-        onPress={() => setIsAddTaskModalVisible(true)}
-        accessibilityLabel="Add Task"
-      >
-        <Ionicons name="add" size={32} color="#fff" />
-      </TouchableOpacity>
-
-      {isAddTaskModalVisible && (
-        <AddTaskModal
-          isVisible={isAddTaskModalVisible}
-          onClose={() => {
-            setIsAddTaskModalVisible(false);
-            setTaskToEdit(undefined);
-            setIsEditing(false);
-          }}
-          onSubmit={handleAddTask}
-          goals={goals}
-          selectedDate={selectedDate}
-          taskToEdit={taskToEdit}
-          isEditing={isEditing}
-          updateAll={updateAll}
-        />
-      )}
-    </View>
+        {isAddTaskModalVisible && (
+          <AddTaskModal
+            isVisible={isAddTaskModalVisible}
+            onClose={() => {
+              setIsAddTaskModalVisible(false);
+              setTaskToEdit(undefined);
+              setIsEditing(false);
+            }}
+            onSubmit={handleAddTask}
+            goals={goals}
+            selectedDate={selectedDate}
+            taskToEdit={taskToEdit}
+            isEditing={isEditing}
+            updateAll={updateAll}
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Section } from '../components/Section';
@@ -73,29 +74,31 @@ const HomeScreen = () => {
   ];
 
   return (
-    <View style={sharedStyles.container}>
-      <Section title="Welcome to Calendar AI">
-        <Text style={sharedStyles.description}>
-          Manage your tasks, goals, and life admin tasks all in one place.
-        </Text>
-        <View style={styles.gridContainer}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={item.title}
-              style={[styles.gridItem, { backgroundColor: item.color }]}
-              onPress={item.onPress}
-            >
-              <Ionicons name={item.icon} size={40} color="#fff" />
-              <Text style={styles.gridItemText}>{item.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </Section>
-      <OnboardingModal
-        isVisible={showOnboarding}
-        onClose={handleOnboardingClose}
-      />
-    </View>
+    <SafeAreaView style={sharedStyles.container}>
+      <View style={sharedStyles.safeAreaContainer}>
+        <Section title="Welcome to AI-Cal">
+          <Text style={sharedStyles.description}>
+            Manage your tasks, goals, and life admin tasks all in one place.
+          </Text>
+          <View style={styles.gridContainer}>
+            {menuItems.map((item, index) => (
+              <TouchableOpacity
+                key={item.title}
+                style={[styles.gridItem, { backgroundColor: item.color }]}
+                onPress={item.onPress}
+              >
+                <Ionicons name={item.icon} size={40} color="#fff" />
+                <Text style={styles.gridItemText}>{item.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Section>
+        <OnboardingModal
+          isVisible={showOnboarding}
+          onClose={handleOnboardingClose}
+        />
+      </View>
+    </SafeAreaView>
   );
 };
 

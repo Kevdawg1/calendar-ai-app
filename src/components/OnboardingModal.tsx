@@ -7,7 +7,7 @@ import { sharedStyles } from 'theme/styles';
 const onboardingSteps = [
   {
     image: require('../../assets/screenshots/home.png'),
-    title: 'Welcome to Calendar AI!',
+    title: 'Welcome to AI-Cal!',
     description: 'This app helps you organize your tasks and manage your time effectively. Let\'s walk through the key features.',
   },
   {

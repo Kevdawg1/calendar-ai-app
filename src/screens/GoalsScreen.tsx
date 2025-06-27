@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, FlatList, ActivityIndicator, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { goalService } from '../services/goalService';
@@ -263,87 +264,89 @@ export const GoalsScreen = () => {
   );
 
   return (
-    <View style={sharedStyles.container}>
-      {isLoading && (
-        <View style={sharedStyles.loadingOverlay}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={sharedStyles.loadingText}>{loadingStage}</Text>
-        </View>
-      )}
-      <ScrollView style={sharedStyles.content}>
-        <Section title="Add New Goal">
-          <GoalForm
-            goalText={newGoalText}
-            onGoalTextChange={setNewGoalText}
-            selectedType={selectedType}
-            onTypeSelect={setSelectedType}
-            selectedPriority={selectedPriority}
-            onPrioritySelect={setSelectedPriority}
-            selectedColor={selectedColor}
-            onColorSelect={setSelectedColor}
-            timeCommitment={timeCommitment}
-            onTimeCommitmentChange={setTimeCommitment}
-            onTypeInfoPress={() => showInfoModal(
-              'Goal Type',
-              '• Short Term: 1-3 months\n• Medium Term: 3-12 months\n• Long Term: 1-5 years'
-            )}
-            onPriorityInfoPress={() => showInfoModal(
-              'Priority Level',
-              '• Low: Nice to have, can be delayed\n• Medium: Important but flexible\n• High: Critical, must be completed'
-            )}
-            onSubmit={handleAddGoal}
-          />
-        </Section>
-        <Section title="Your Goals">
-          {userPreferences && (
-            <WeeklyTimeBalance remainingHours={remainingHours} breakdown={breakdown} />
-          )}
-          {goals.length === 0 ? (
-            <EmptyState
-              icon="flag-outline"
-              title="No Goals Yet"
-              message="No goals yet. Add your first goal above!"
-            />
-          ) : (
-            <FlatList
-              data={goals}
-              renderItem={renderGoalItem}
-              keyExtractor={item => item.id}
-              scrollEnabled={false}
-            />
-          )}
-        </Section>
-      </ScrollView>
-      
-      <EditGoalModal
-        visible={editModalVisible}
-        goal={editGoal}
-        editType={editType}
-        onTypeSelect={setEditType}
-        editPriority={editPriority}
-        onPrioritySelect={setEditPriority}
-        editColor={editColor}
-        onColorSelect={setEditColor}
-        editTimeCommitment={editTimeCommitment}
-        onTimeCommitmentChange={setEditTimeCommitment}
-        onTypeInfoPress={() => showInfoModal(
-          'Goal Type',
-          '• Short Term: 1-3 months\n• Medium Term: 3-12 months\n• Long Term: 1-5 years'
+    <SafeAreaView style={sharedStyles.container}>
+      <View style={sharedStyles.safeAreaContainer}>
+        {isLoading && (
+          <View style={sharedStyles.loadingOverlay}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={sharedStyles.loadingText}>{loadingStage}</Text>
+          </View>
         )}
-        onPriorityInfoPress={() => showInfoModal(
-          'Priority Level',
-          '• Low: Nice to have, can be delayed\n• Medium: Important but flexible\n• High: Critical, must be completed'
-        )}
-        onSave={handleSaveEditGoal}
-        onCancel={() => setEditModalVisible(false)}
-      />
-      
-      <InfoModal
-        visible={infoModalVisible}
-        title={infoContent.title}
-        content={infoContent.content}
-        onClose={() => setInfoModalVisible(false)}
-      />
-    </View>
+        <ScrollView style={sharedStyles.content}>
+          <Section title="Add New Goal">
+            <GoalForm
+              goalText={newGoalText}
+              onGoalTextChange={setNewGoalText}
+              selectedType={selectedType}
+              onTypeSelect={setSelectedType}
+              selectedPriority={selectedPriority}
+              onPrioritySelect={setSelectedPriority}
+              selectedColor={selectedColor}
+              onColorSelect={setSelectedColor}
+              timeCommitment={timeCommitment}
+              onTimeCommitmentChange={setTimeCommitment}
+              onTypeInfoPress={() => showInfoModal(
+                'Goal Type',
+                '• Short Term: 1-3 months\n• Medium Term: 3-12 months\n• Long Term: 1-5 years'
+              )}
+              onPriorityInfoPress={() => showInfoModal(
+                'Priority Level',
+                '• Low: Nice to have, can be delayed\n• Medium: Important but flexible\n• High: Critical, must be completed'
+              )}
+              onSubmit={handleAddGoal}
+            />
+          </Section>
+          <Section title="Your Goals">
+            {userPreferences && (
+              <WeeklyTimeBalance remainingHours={remainingHours} breakdown={breakdown} />
+            )}
+            {goals.length === 0 ? (
+              <EmptyState
+                icon="flag-outline"
+                title="No Goals Yet"
+                message="No goals yet. Add your first goal above!"
+              />
+            ) : (
+              <FlatList
+                data={goals}
+                renderItem={renderGoalItem}
+                keyExtractor={item => item.id}
+                scrollEnabled={false}
+              />
+            )}
+          </Section>
+        </ScrollView>
+        
+        <EditGoalModal
+          visible={editModalVisible}
+          goal={editGoal}
+          editType={editType}
+          onTypeSelect={setEditType}
+          editPriority={editPriority}
+          onPrioritySelect={setEditPriority}
+          editColor={editColor}
+          onColorSelect={setEditColor}
+          editTimeCommitment={editTimeCommitment}
+          onTimeCommitmentChange={setEditTimeCommitment}
+          onTypeInfoPress={() => showInfoModal(
+            'Goal Type',
+            '• Short Term: 1-3 months\n• Medium Term: 3-12 months\n• Long Term: 1-5 years'
+          )}
+          onPriorityInfoPress={() => showInfoModal(
+            'Priority Level',
+            '• Low: Nice to have, can be delayed\n• Medium: Important but flexible\n• High: Critical, must be completed'
+          )}
+          onSave={handleSaveEditGoal}
+          onCancel={() => setEditModalVisible(false)}
+        />
+        
+        <InfoModal
+          visible={infoModalVisible}
+          title={infoContent.title}
+          content={infoContent.content}
+          onClose={() => setInfoModalVisible(false)}
+        />
+      </View>
+    </SafeAreaView>
   );
 }; 

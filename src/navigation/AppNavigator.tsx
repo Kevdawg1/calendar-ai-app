@@ -8,24 +8,29 @@ import { LifeAdminScreen } from '../screens/LifeAdminScreen';
 import { SurveyScreen } from '../screens/SurveyScreen';
 import { TaskReviewScreen } from '../screens/TaskReviewScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { theme } from '../theme';
 import { Task } from '../types';
 import { LifeAdminTask } from '../data/lifeAdminTasks';
 import { userPreferencesService } from '../services/userPreferencesService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type RootStackParamList = {
+  Welcome: undefined;
+  Survey: undefined;
   Home: undefined;
   Calendar: {
     tasks?: (Task | LifeAdminTask)[];
   };
   Goals: undefined;
   LifeAdmin: undefined;
-  Survey: undefined;
   TaskReview: { tasks: Task[] };
   Settings: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
+
+const IS_FIRST_TIME_USER_KEY = '@is_first_time_user';
 
 export const AppNavigator = () => {
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList | null>(null);
@@ -35,27 +40,37 @@ export const AppNavigator = () => {
 
   useEffect(() => {
     console.log('AppNavigator useEffect running...');
-    const checkSurveyStatus = async () => {
+    const checkUserStatus = async () => {
       try {
-        console.log('Starting survey status check...');
+        console.log('Starting user status check...');
         setIsLoading(true);
         // Add a small delay to ensure AsyncStorage is properly initialized
         await new Promise(resolve => setTimeout(resolve, 100));
-        console.log('Checking if survey is completed...');
-        const surveyCompleted = await userPreferencesService.isSurveyCompleted();
-        console.log('Survey completed:', surveyCompleted);
-        setInitialRoute(surveyCompleted ? 'Home' : 'Survey');
+        
+        console.log('Checking if user has seen welcome screen...');
+        const hasSeenWelcome = await AsyncStorage.getItem(IS_FIRST_TIME_USER_KEY);
+        console.log('Has seen welcome:', hasSeenWelcome);
+        
+        if (hasSeenWelcome !== 'true') {
+          // First-time user - show welcome screen
+          setInitialRoute('Welcome');
+        } else {
+          console.log('Checking if survey is completed...');
+          const surveyCompleted = await userPreferencesService.isSurveyCompleted();
+          console.log('Survey completed:', surveyCompleted);
+          setInitialRoute(surveyCompleted ? 'Home' : 'Survey');
+        }
       } catch (error) {
-        console.error('Error checking survey status:', error);
-        // Default to Survey screen on error
-        setInitialRoute('Survey');
+        console.error('Error checking user status:', error);
+        // Default to Welcome screen on error
+        setInitialRoute('Welcome');
       } finally {
-        console.log('Survey status check completed');
+        console.log('User status check completed');
         setIsLoading(false);
       }
     };
 
-    checkSurveyStatus();
+    checkUserStatus();
   }, []);
 
   console.log('AppNavigator render - isLoading:', isLoading, 'initialRoute:', initialRoute);
@@ -83,6 +98,14 @@ export const AppNavigator = () => {
       }}
     >
       <Stack.Screen
+        name="Welcome"
+        component={WelcomeScreen}
+        options={{
+          title: 'Welcome to AI-Cal',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="Survey"
         component={SurveyScreen}
         options={{
@@ -94,7 +117,8 @@ export const AppNavigator = () => {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Calendar AI',
+          title: 'AI-Cal',
+          headerLeft: () => null, // Disable back button on Home screen
         }}
       />
       <Stack.Screen

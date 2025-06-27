@@ -1,5 +1,5 @@
 {
-  "name": "calendar-ai",
+  "name": "ai-cal",
   "version": "1.0.0",
   "description": "AI-powered calendar and task management app",
   "main": "node_modules/expo/AppEntry.js",
@@ -22,6 +22,7 @@
     "axios": "^1.6.7",
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
+    "eas-cli": "^16.13.1",
     "expo": "~53.0.12",
     "expo-checkbox": "^4.1.4",
     "expo-status-bar": "~2.2.3",

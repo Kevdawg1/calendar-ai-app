@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -23,12 +24,13 @@ export const SettingsScreen = () => {
       // Get all keys from AsyncStorage
       const keys = await AsyncStorage.getAllKeys();
       
-      // Filter keys that belong to our app (start with @calendar_ai_ or @user_ or @survey_ or @checked_)
+      // Filter keys that belong to our app (start with @calendar_ai_ or @user_ or @survey_ or @checked_ or @is_first_time_user)
       const appKeys = keys.filter(key => 
         key.startsWith('@calendar_ai_') || 
         key.startsWith('@user_') || 
         key.startsWith('@survey_') || 
         key.startsWith('@checked_') ||
+        key === '@is_first_time_user' ||
         key === 'tasks' ||
         key === 'goals'
       );
@@ -76,10 +78,10 @@ export const SettingsScreen = () => {
                   {
                     text: 'OK',
                     onPress: () => {
-                      // Navigate back to Survey screen
+                      // Navigate back to Welcome screen
                       navigation.reset({
                         index: 0,
-                        routes: [{ name: 'Survey' }],
+                        routes: [{ name: 'Welcome' }],
                       });
                     },
                   },
@@ -97,28 +99,30 @@ export const SettingsScreen = () => {
   };
 
   return (
-    <View style={sharedStyles.container}>
-      <ScrollView style={sharedStyles.content}>
-        <Section title="Settings">
-          <Text style={[sharedStyles.description, { marginBottom: theme.spacing.lg }]}>
-            Manage your app settings and data.
-          </Text>
-          
-          <View style={styles.dangerZone}>
-            <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
-            <Text style={styles.dangerZoneDescription}>
-              These actions cannot be undone. Please be certain.
+    <SafeAreaView style={sharedStyles.container}>
+      <View style={sharedStyles.safeAreaContainer}>
+        <ScrollView style={sharedStyles.content}>
+          <Section title="Settings">
+            <Text style={[sharedStyles.description, { marginBottom: theme.spacing.lg }]}>
+              Manage your app settings and data.
             </Text>
-            <Button
-              title="Reset App"
-              onPress={handleResetApp}
-              style={styles.resetButton}
-              variant="danger"
-            />
-          </View>
-        </Section>
-      </ScrollView>
-    </View>
+            
+            <View style={styles.dangerZone}>
+              <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
+              <Text style={styles.dangerZoneDescription}>
+                These actions cannot be undone. Please be certain.
+              </Text>
+              <Button
+                title="Reset App"
+                onPress={handleResetApp}
+                style={styles.resetButton}
+                variant="danger"
+              />
+            </View>
+          </Section>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 };
 
