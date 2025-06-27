@@ -6,6 +6,24 @@
         },
         "ios": {
           "buildConfiguration": "Release"
+        },
+        "env": {
+          "AZURE_OPENAI_ENDPOINT": "AZURE_OPENAI_ENDPOINT",
+          "AZURE_OPENAI_API_KEY": "AZURE_OPENAI_API_KEY",
+          "AZURE_OPENAI_DEPLOYMENT": "AZURE_OPENAI_DEPLOYMENT"
+        }
+      },
+      "development": {
+        "android": {
+          "buildType": "apk"
+        },
+        "ios": {
+          "buildConfiguration": "Debug"
+        },
+        "env": {
+          "AZURE_OPENAI_ENDPOINT": "AZURE_OPENAI_ENDPOINT",
+          "AZURE_OPENAI_API_KEY": "AZURE_OPENAI_API_KEY",
+          "AZURE_OPENAI_DEPLOYMENT": "AZURE_OPENAI_DEPLOYMENT"
         }
       }
     }
