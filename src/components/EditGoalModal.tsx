@@ -76,12 +76,6 @@ export const EditGoalModal: React.FC<EditGoalModalProps> = ({
             >
               <Text style={sharedStyles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[sharedStyles.modalButton, sharedStyles.saveButton]}
-              onPress={onSave}
-            >
-              <Text style={sharedStyles.modalButtonText}>Save</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>

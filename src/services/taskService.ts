@@ -52,12 +52,30 @@ loadTasks();
 // Helper function to generate recurring task instances
 const generateRecurringTasks = (task: Task): Task[] => {
   console.log('Generating recurring tasks for task:', task);
-  if (!task.recurrence) return [];
+  console.log('Task recurrence:', task.recurrence);
+  console.log('Task startDate:', task.startDate);
+  console.log('Task endDate:', task.recurrence?.endDate);
+  
+  if (!task.recurrence || task.recurrence.frequency === 'none') {
+    console.log('No recurrence or frequency is none, returning empty array');
+    return [];
+  }
 
   const recurringTasks: Task[] = [];
   const startDate = new Date(task.startDate);
   const endDate = new Date(task.recurrence.endDate);
   let currentDate = new Date(startDate);
+  const recurringGroupId = task.recurringGroupId || task.id; // Use existing group ID or task ID as group ID
+
+  console.log('Start date:', startDate);
+  console.log('End date:', endDate);
+  console.log('Recurring group ID:', recurringGroupId);
+
+  // Check if end date is after start date
+  if (endDate <= startDate) {
+    console.log('End date is not after start date, returning empty array');
+    return [];
+  }
 
   // Start from the next occurrence (skip the original task date)
   switch (task.recurrence.frequency) {
@@ -76,17 +94,23 @@ const generateRecurringTasks = (task: Task): Task[] => {
     default:
       currentDate.setDate(currentDate.getDate() + 1);
   }
-  console.log('currentDate', currentDate);
+  console.log('Initial current date (after skipping original):', currentDate);
+  console.log('Current date <= end date?', currentDate <= endDate);
 
+  let taskCount = 0;
   while (currentDate <= endDate) {
     const newTask: Task = {
       ...task,
-      id: generateUUID(),
+      id: generateUUID(), // Each recurring task gets its own unique ID
       startDate: currentDate.toISOString().split('T')[0],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      recurringGroupId: recurringGroupId, // Share the same group ID
     };
     recurringTasks.push(newTask);
+    taskCount++;
+
+    console.log(`Created recurring task ${taskCount}:`, newTask.startDate);
 
     // Move to next occurrence based on frequency
     switch (task.recurrence.frequency) {
@@ -107,6 +131,7 @@ const generateRecurringTasks = (task: Task): Task[] => {
     }
   }
 
+  console.log(`Generated ${recurringTasks.length} recurring tasks`);
   return recurringTasks;
 };
 
@@ -179,6 +204,9 @@ export const taskService = {
       await loadTasks();
     }
     
+    console.log('Adding tasks:', newTasks);
+    console.log('Tasks with recurrence:', newTasks.filter(task => task.recurrence));
+    
     // Filter out duplicates based on different criteria for different task types
     const uniqueNewTasks = newTasks.filter(newTask => {
       // For life admin tasks, check by title and goalId
@@ -197,17 +225,53 @@ export const taskService = {
       );
     });
     
-    const tasksWithIds = uniqueNewTasks.map(task => ({
-      ...task,
-      id: task.id || generateUUID(), // Use existing ID if provided, otherwise generate new one
-      status: 'pending' as const,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }));
+    console.log('Unique new tasks:', uniqueNewTasks);
+    
+    const tasksWithIds = uniqueNewTasks.map(task => {
+      const taskWithId = {
+        ...task,
+        id: task.id || generateUUID(), // Use existing ID if provided, otherwise generate new one
+        status: 'pending' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
+      // Set recurringGroupId for tasks with recurrence
+      if (task.recurrence) {
+        taskWithId.recurringGroupId = taskWithId.id;
+        console.log('Set recurringGroupId for task:', taskWithId.id);
+      }
+
+      return taskWithId;
+    });
+
+    console.log('Tasks with IDs:', tasksWithIds);
+    console.log('Tasks with recurrence after ID assignment:', tasksWithIds.filter(task => task.recurrence));
+
+    // Add the original tasks
     tasks.push(...tasksWithIds);
+    
+    // Generate recurring tasks for tasks with recurrence
+    const allRecurringTasks: Task[] = [];
+    tasksWithIds.forEach(task => {
+      if (task.recurrence) {
+        console.log('Generating recurring tasks for:', task.title);
+        const recurringTasks = generateRecurringTasks(task);
+        console.log('Generated recurring tasks:', recurringTasks.length);
+        allRecurringTasks.push(...recurringTasks);
+      }
+    });
+    
+    // Add the recurring tasks
+    if (allRecurringTasks.length > 0) {
+      tasks.push(...allRecurringTasks);
+      console.log(`Generated ${allRecurringTasks.length} recurring tasks`);
+    } else {
+      console.log('No recurring tasks were generated');
+    }
+    
     await saveTasks();
-    return tasksWithIds;
+    return [...tasksWithIds, ...allRecurringTasks];
   },
 
   updateTaskColors: async (goalId: string, color: string): Promise<void> => {
@@ -230,18 +294,60 @@ export const taskService = {
     const task = tasks.find(t => t.id === taskId);
     if (!task || !task.recurrence) return tasks;
 
+    // Find all tasks that belong to the same recurring group
+    const recurringGroupId = task.recurringGroupId || task.id;
+    const recurringGroupTasks = tasks.filter(t => t.recurringGroupId === recurringGroupId);
+    
+    // Sort tasks by start date to maintain order
+    recurringGroupTasks.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    
+    // Find the original task's position in the sequence
+    const originalTaskIndex = recurringGroupTasks.findIndex(t => t.id === taskId);
+    if (originalTaskIndex === -1) return tasks;
+
+    // Calculate the new start date if it's being updated
+    const newStartDate = updates.startDate ? new Date(updates.startDate) : new Date(task.startDate);
+    const originalStartDate = new Date(task.startDate);
+    
+    // Calculate the offset from the original start date
+    const dateOffset = newStartDate.getTime() - originalStartDate.getTime();
+
     const updatedTasks = tasks.map(t => {
-      if (t.id === taskId || (
-        t.recurrence &&
-        t.title === task.title &&
-        t.goalId === task.goalId &&
-        t.startTime === task.startTime &&
-        t.endTime === task.endTime &&
-        new Date(t.startDate) >= new Date(task.startDate)
-      )) {
+      if (t.recurringGroupId === recurringGroupId && new Date(t.startDate) >= new Date(task.startDate)) {
+        // Find this task's position in the sequence
+        const taskIndex = recurringGroupTasks.findIndex(rt => rt.id === t.id);
+        if (taskIndex === -1) return t;
+
+        // Calculate the new start date for this task
+        let newTaskStartDate = new Date(t.startDate);
+        if (updates.startDate && t.recurrence) {
+          // Calculate the relative position from the original task
+          const relativePosition = taskIndex - originalTaskIndex;
+          
+          // Apply the same offset plus the frequency spacing
+          newTaskStartDate = new Date(originalStartDate.getTime() + dateOffset);
+          
+          // Add the frequency spacing based on the relative position
+          switch (t.recurrence.frequency) {
+            case 'daily':
+              newTaskStartDate.setDate(newTaskStartDate.getDate() + (relativePosition * t.recurrence.interval));
+              break;
+            case 'weekly':
+              newTaskStartDate.setDate(newTaskStartDate.getDate() + (relativePosition * 7 * t.recurrence.interval));
+              break;
+            case 'monthly':
+              newTaskStartDate.setMonth(newTaskStartDate.getMonth() + (relativePosition * t.recurrence.interval));
+              break;
+            case 'seasonal':
+              newTaskStartDate.setMonth(newTaskStartDate.getMonth() + (relativePosition * 3 * t.recurrence.interval));
+              break;
+          }
+        }
+
         return {
           ...t,
           ...updates,
+          startDate: newTaskStartDate.toISOString().split('T')[0], // Update with calculated date
           updatedAt: new Date().toISOString(),
         };
       }
@@ -268,25 +374,15 @@ export const taskService = {
         task.recurrence.endDate !== updates.recurrence.endDate)) {
       
       // Remove existing recurring instances of this task
-      const taskTitle = task.title;
-      const taskGoalId = task.goalId;
-      const taskStartTime = task.startTime;
-      const taskEndTime = task.endTime;
-      
-      tasks = tasks.filter(t => !(
-        t.id !== taskId && // Keep the original task
-        t.title === taskTitle &&
-        t.goalId === taskGoalId &&
-        t.startTime === taskStartTime &&
-        t.endTime === taskEndTime &&
-        t.recurrence // Only remove recurring instances
-      ));
+      const recurringGroupId = task.recurringGroupId || task.id;
+      tasks = tasks.filter(t => t.recurringGroupId !== recurringGroupId || t.id === taskId);
 
       // Update the original task
       const updatedTask = {
         ...task,
         ...updates,
         updatedAt: new Date().toISOString(),
+        recurringGroupId: task.id, // Set the group ID to the original task's ID
       };
       
       const taskIndex = tasks.findIndex(t => t.id === taskId);
@@ -357,5 +453,76 @@ export const taskService = {
     await saveTasks();
     
     console.log(`Removed ${tasksToRemove.length} duplicate life admin tasks`);
+  },
+
+  updateSingleOccurrence: async (taskId: string, updates: TaskUpdate): Promise<Task[]> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
+    
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return tasks;
+
+    // If this is a recurring task, create a new single task and remove this occurrence from the series
+    if (task.recurrence) {
+      // Create a new task with the updates but without recurrence
+      const newTask: Task = {
+        ...task,
+        ...updates,
+        id: generateUUID(),
+        recurrence: undefined, // Remove recurrence
+        recurringGroupId: undefined, // Remove from recurring group
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Remove only this specific occurrence from the recurring series
+      tasks = tasks.filter(t => t.id !== taskId);
+
+      // Add the new single task
+      tasks.push(newTask);
+    } else {
+      // Regular single task update
+      const taskIndex = tasks.findIndex(t => t.id === taskId);
+      if (taskIndex !== -1) {
+        tasks[taskIndex] = {
+          ...tasks[taskIndex],
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+    }
+
+    await saveTasks();
+    return [...tasks];
+  },
+
+  deleteSingleOccurrence: async (taskId: string): Promise<Task[]> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
+    
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return tasks;
+
+    // Remove the specific task
+    tasks = tasks.filter(t => t.id !== taskId);
+    await saveTasks();
+    return [...tasks];
+  },
+
+  deleteAllRecurringOccurrences: async (taskId: string): Promise<Task[]> => {
+    if (!isInitialized) {
+      await loadTasks();
+    }
+    
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || !task.recurrence) return tasks;
+
+    // Remove all tasks that belong to the same recurring group
+    const recurringGroupId = task.recurringGroupId || task.id;
+    tasks = tasks.filter(t => t.recurringGroupId !== recurringGroupId);
+
+    await saveTasks();
+    return [...tasks];
   },
 }; 

@@ -76,21 +76,24 @@ export const LifeAdminScreen = () => {
   const loadScheduledTasks = async () => {
     try {
       const allTasks = await taskService.getAllTasks();
-      const lifeAdminTaskIds = new Set(
-        allTasks
-          .filter(task => task.goalId === 'life-admin')
-          .map(task => task.title.split(' [')[0]) // Extract original task title without frequency
-      );
-      setScheduledTasks(lifeAdminTaskIds);
+      const lifeAdminTasks = allTasks.filter(task => task.goalId === 'life-admin');
+      
+      // Create a map of task titles to their UUIDs
+      const taskTitleToId = new Map<string, string>();
+      lifeAdminTasks.forEach(task => {
+        const originalTitle = task.title.split(' [')[0]; // Extract original task title without frequency
+        taskTitleToId.set(originalTitle, task.id);
+      });
       
       // Get checked tasks from AsyncStorage
       const checkedTasks = await checkedTasksService.getCheckedTasks();
       
       // Check which life admin tasks are already in the calendar and mark them as selected
       const tasksInCalendar = new Set<string>();
-      lifeAdminTaskIds.forEach(taskTitle => {
+      lifeAdminTasks.forEach(task => {
+        const originalTitle = task.title.split(' [')[0];
         // Find the corresponding life admin task by title
-        const matchingTask = tasks.find(task => task.title === taskTitle);
+        const matchingTask = tasks.find(task => task.title === originalTitle);
         if (matchingTask) {
           tasksInCalendar.add(matchingTask.id);
         }
@@ -151,10 +154,15 @@ export const LifeAdminScreen = () => {
   };
 
   const handleFrequencySelect = (task: LifeAdminTask, frequency: LifeAdminTask['frequency']) => {
-    const updatedTasks = tasks.map(t => 
-      t.id === task.id ? { ...t, frequency } : t
-    );
-    setTasks(updatedTasks);
+    if (frequency === 'none') {
+      // Remove the task from the list when "Does not repeat" is selected
+      setTasks(tasks.filter(t => t.id !== task.id));
+    } else {
+      const updatedTasks = tasks.map(t => 
+        t.id === task.id ? { ...t, frequency } : t
+      );
+      setTasks(updatedTasks);
+    }
     setShowFrequencyModal(false);
     setEditingTask(null);
   };

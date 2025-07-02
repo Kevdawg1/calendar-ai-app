@@ -106,7 +106,11 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
           {
             text: 'This Occurrence Only',
             onPress: () => {
-              setTaskToEdit(task);
+              const singleOccurrenceTask = {
+                ...task,
+                recurrence: undefined
+              };
+              setTaskToEdit(singleOccurrenceTask);
               setIsEditing(true);
               setUpdateAll(false);
               setIsAddTaskModalVisible(true);
@@ -136,13 +140,54 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    try {
-      await taskService.deleteTask(taskId);
-      const updatedTasks = await taskService.getAllTasks();
-      setTasks(updatedTasks);
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      Alert.alert('Error', 'Failed to delete task');
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (task.recurrence) {
+      Alert.alert(
+        'Delete Recurring Task',
+        'Would you like to delete this occurrence only or all future occurrences?',
+        [
+          {
+            text: 'This Occurrence Only',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const updatedTasks = await taskService.deleteSingleOccurrence(taskId);
+                setTasks(updatedTasks);
+              } catch (error) {
+                console.error('Error deleting task:', error);
+                Alert.alert('Error', 'Failed to delete task');
+              }
+            },
+          },
+          {
+            text: 'All Future Occurrences',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const updatedTasks = await taskService.deleteAllRecurringOccurrences(taskId);
+                setTasks(updatedTasks);
+              } catch (error) {
+                console.error('Error deleting recurring tasks:', error);
+                Alert.alert('Error', 'Failed to delete recurring tasks');
+              }
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ]
+      );
+    } else {
+      try {
+        const updatedTasks = await taskService.deleteSingleOccurrence(taskId);
+        setTasks(updatedTasks);
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        Alert.alert('Error', 'Failed to delete task');
+      }
     }
   };
 
@@ -159,11 +204,11 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
             text: 'This Occurrence Only',
             onPress: async () => {
               try {
-                const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
-                if (updatedTask) {
-                  const updatedTasks = await taskService.getAllTasks();
-                  setTasks(updatedTasks);
-                }
+                const updatedTasks = await taskService.updateSingleOccurrence(taskId, { 
+                  status: newStatus,
+                  recurrence: undefined
+                });
+                setTasks(updatedTasks);
               } catch (error) {
                 console.error('Error updating task status:', error);
                 Alert.alert('Error', 'Failed to update task status');
@@ -190,11 +235,8 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
       );
     } else {
       try {
-        const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
-        if (updatedTask) {
-          const updatedTasks = await taskService.getAllTasks();
-          setTasks(updatedTasks);
-        }
+        const updatedTasks = await taskService.updateSingleOccurrence(taskId, { status: newStatus });
+        setTasks(updatedTasks);
       } catch (error) {
         console.error('Error updating task status:', error);
         Alert.alert('Error', 'Failed to update task status');
@@ -227,19 +269,22 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
 
     if (isEditing && taskToEdit) {
       try {
-        if (updateAll && taskToEdit.recurrence) {
+        // Check if this was originally a recurring task but is now being edited as a single occurrence
+        const wasRecurring = taskToEdit.recurrence !== undefined;
+        const isNowSingle = !taskData.recurrence;
+        
+        if (updateAll && wasRecurring && !isNowSingle) {
+          // Update all future occurrences
           const updatedTasks = await taskService.updateRecurringTask(taskToEdit.id, {
             ...taskData,
           });
           setTasks(updatedTasks);
         } else {
-          const updatedTask = await taskService.updateTask(taskToEdit.id, {
+          // Update single occurrence (either was single or is being converted to single)
+          const updatedTasks = await taskService.updateSingleOccurrence(taskToEdit.id, {
             ...taskData,
           });
-          if (updatedTask) {
-            const updatedTasks = await taskService.getAllTasks();
-            setTasks(updatedTasks);
-          }
+          setTasks(updatedTasks);
         }
         setIsAddTaskModalVisible(false);
         setTaskToEdit(undefined);
@@ -282,46 +327,10 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         return false;
       }
       
+      // Each task now has its own startDate, so we just need to check if it matches
       if (task.startDate === date) {
         console.log('Task matches date:', task);
         return true;
-      }
-      
-      if (task.recurrence) {
-        const startDate = new Date(task.startDate);
-        const endDate = new Date(task.recurrence.endDate);
-        const currentDate = new Date(date);
-        
-        if (currentDate < startDate || currentDate > endDate) {
-          console.log('Task outside recurrence range:', task);
-          return false;
-        }
-        
-        const daysDiff = Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const isRecurring = (() => {
-          switch (task.recurrence.frequency) {
-            case 'daily':
-              return true;
-            case 'weekly':
-              return daysDiff % (7 * task.recurrence.interval) === 0;
-            case 'monthly':
-              return startDate.getDate() === currentDate.getDate() &&
-                ((currentDate.getFullYear() - startDate.getFullYear()) * 12 +
-                  currentDate.getMonth() - startDate.getMonth()) % task.recurrence.interval === 0;
-            case 'seasonal':
-              return startDate.getDate() === currentDate.getDate() &&
-                Math.floor(startDate.getMonth() / 3) === Math.floor(currentDate.getMonth() / 3) &&
-                ((currentDate.getFullYear() - startDate.getFullYear()) * 4 +
-                  Math.floor(currentDate.getMonth() / 3) - Math.floor(startDate.getMonth() / 3)) % task.recurrence.interval === 0;
-            default:
-              return false;
-          }
-        })();
-        
-        if (isRecurring) {
-          console.log('Task is recurring for this date:', task);
-        }
-        return isRecurring;
       }
       
       return false;
@@ -359,46 +368,13 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
       const color = getGoalColor(task.goalId);
       console.log('Processing task:', task.id, 'with color:', color);
       
-      if (task.recurrence) {
-        const startDate = new Date(task.startDate);
-        const endDate = new Date(task.recurrence.endDate);
-        let currentDate = new Date(startDate);
-        console.log('Processing recurring task from', startDate, 'to', endDate);
-        
-        while (currentDate <= endDate) {
-          const dateStr = currentDate.toISOString().split('T')[0];
-          if (!marked[dateStr]) {
-            marked[dateStr] = { dots: [] };
-          }
-          if (!marked[dateStr].dots.some((dot: any) => dot.color === color)) {
-            marked[dateStr].dots.push({ color, key: task.id });
-            console.log('Added dot for date:', dateStr, 'with color:', color);
-          }
-          switch (task.recurrence.frequency) {
-            case 'daily':
-              currentDate.setDate(currentDate.getDate() + task.recurrence.interval);
-              break;
-            case 'weekly':
-              currentDate.setDate(currentDate.getDate() + 7 * task.recurrence.interval);
-              break;
-            case 'monthly':
-              currentDate.setMonth(currentDate.getMonth() + task.recurrence.interval);
-              break;
-            case 'seasonal':
-              currentDate.setMonth(currentDate.getMonth() + 3 * task.recurrence.interval);
-              break;
-            default:
-              currentDate = new Date(endDate.getTime() + 1);
-          }
-        }
-      } else {
-        if (!marked[task.startDate]) {
-          marked[task.startDate] = { dots: [] };
-        }
-        if (!marked[task.startDate].dots.some((dot: any) => dot.color === color)) {
-          marked[task.startDate].dots.push({ color, key: task.id });
-          console.log('Added dot for non-recurring task on date:', task.startDate, 'with color:', color);
-        }
+      // Each task now has its own startDate, so we just need to mark that specific date
+      if (!marked[task.startDate]) {
+        marked[task.startDate] = { dots: [] };
+      }
+      if (!marked[task.startDate].dots.some((dot: any) => dot.color === color)) {
+        marked[task.startDate].dots.push({ color, key: task.id });
+        console.log('Added dot for task on date:', task.startDate, 'with color:', color);
       }
     });
     

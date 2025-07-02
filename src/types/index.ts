@@ -23,10 +23,11 @@ export interface Task {
   frequency?: 'daily' | 'weekly' | 'monthly' | 'seasonal';
   enabled?: boolean;
   recurrence?: {
-    frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal';
+    frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'none';
     interval: number;
     endDate: string;
   };
+  recurringGroupId?: string;
 }
 
 export interface TaskUpdate {
@@ -37,8 +38,9 @@ export interface TaskUpdate {
   endTime?: string;
   status?: 'pending' | 'completed' | 'cancelled';
   recurrence?: {
-    frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal';
+    frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'none';
     interval: number;
     endDate: string;
   };
+  recurringGroupId?: string;
 } 

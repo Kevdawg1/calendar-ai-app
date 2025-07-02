@@ -154,7 +154,7 @@ export const GoalsScreen = () => {
       Alert.alert('Error', 'Please enter a goal');
       return;
     }
-    const hours = parseInt(timeCommitment);
+    const hours = parseFloat(timeCommitment);
     if (isNaN(hours) || hours <= 0) {
       Alert.alert('Error', 'Please enter a valid time commitment');
       return;
@@ -182,8 +182,22 @@ export const GoalsScreen = () => {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await goalService.deleteGoal(goalId);
-            setGoals(goals.filter(goal => goal.id !== goalId));
+            try {
+              // Get all tasks for this goal
+              const goalTasks = await taskService.getTasksByGoalId(goalId);
+              
+              // Delete all tasks for this goal
+              for (const task of goalTasks) {
+                await taskService.deleteTask(task.id);
+              }
+              
+              // Delete the goal
+              await goalService.deleteGoal(goalId);
+              setGoals(goals.filter(goal => goal.id !== goalId));
+            } catch (error) {
+              console.error('Error deleting goal and associated tasks:', error);
+              Alert.alert('Error', 'Failed to delete goal and associated tasks');
+            }
           },
         },
       ]
@@ -201,7 +215,7 @@ export const GoalsScreen = () => {
 
   const handleSaveEditGoal = async () => {
     if (!editGoal) return;
-    const hours = parseInt(editTimeCommitment);
+    const hours = parseFloat(editTimeCommitment);
     if (isNaN(hours) || hours <= 0) {
       Alert.alert('Error', 'Please enter a valid time commitment');
       return;

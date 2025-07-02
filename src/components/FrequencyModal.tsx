@@ -2,13 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { theme } from '../theme';
 
-type Frequency = 'daily' | 'weekly' | 'monthly' | 'seasonal';
+type Frequency = 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'none';
 
 const FREQUENCIES: Frequency[] = [
   'daily',
   'weekly',
   'monthly',
   'seasonal',
+  'none',
 ];
 
 interface FrequencyModalProps {
@@ -22,6 +23,13 @@ export const FrequencyModal: React.FC<FrequencyModalProps> = ({
   onClose,
   onSelect,
 }) => {
+  const getFrequencyLabel = (frequency: Frequency): string => {
+    if (frequency === 'none') {
+      return 'Does not repeat';
+    }
+    return frequency.charAt(0).toUpperCase() + frequency.slice(1);
+  };
+
   return (
     <Modal
       visible={visible}
@@ -43,7 +51,7 @@ export const FrequencyModal: React.FC<FrequencyModalProps> = ({
               onPress={() => onSelect(frequency)}
             >
               <Text style={styles.frequencyText}>
-                {frequency.charAt(0).toUpperCase() + frequency.slice(1)}
+                {getFrequencyLabel(frequency)}
               </Text>
             </TouchableOpacity>
           ))}

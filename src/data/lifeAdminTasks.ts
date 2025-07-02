@@ -2,7 +2,7 @@ export interface LifeAdminTask {
   id: string;
   title: string;
   category: 'household' | 'laundry' | 'meal' | 'personal' | 'admin' | 'maintenance' | 'outdoor' | 'pet';
-  frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal';
+  frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'none';
   enabled: boolean;
 }
 

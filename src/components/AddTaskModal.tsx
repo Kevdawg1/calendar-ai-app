@@ -28,7 +28,7 @@ type AddTaskModalProps = {
   selectedDate: string;
 };
 
-type Frequency = 'daily' | 'weekly' | 'monthly' | 'seasonal';
+type Frequency = 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'none';
 
 export function AddTaskModal({
   isVisible,
@@ -62,6 +62,9 @@ export function AddTaskModal({
   const [showEndDatePicker, setShowEndDatePicker] = useState(
     Platform.OS === 'ios'
   );
+
+  const [titleError, setTitleError] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
 
   // Initialize form with task data when editing
   useEffect(() => {
@@ -99,6 +102,12 @@ export function AddTaskModal({
 
     if (startTime >= endTime) {
       Alert.alert('Error', 'End time must be after start time');
+      return;
+    }
+
+    // Validate recurrence end date
+    if (recurrence && new Date(recurrence.endDate) < taskDate) {
+      Alert.alert('Error', 'Recurrence end date cannot be before the start date.');
       return;
     }
 
@@ -168,10 +177,31 @@ export function AddTaskModal({
 
   const handleFrequencySelect = (frequency: Frequency) => {
     setShowFrequencyModal(false);
+    if (frequency === 'none') {
+      setRecurrence(undefined);
+      return;
+    }
+    // Set default end date based on frequency
+    const now = new Date(taskDate);
+    let endDate = new Date(now);
+    switch (frequency) {
+      case 'daily':
+        endDate.setDate(now.getDate() + 1);
+        break;
+      case 'weekly':
+        endDate.setDate(now.getDate() + 7);
+        break;
+      case 'monthly':
+        endDate.setMonth(now.getMonth() + 1);
+        break;
+      case 'seasonal':
+        endDate.setMonth(now.getMonth() + 3);
+        break;
+    }
     setRecurrence({
       frequency,
       interval: 1,
-      endDate: format(new Date(), 'yyyy-MM-dd'),
+      endDate: format(endDate, 'yyyy-MM-dd'),
     });
   };
 
@@ -180,8 +210,31 @@ export function AddTaskModal({
       setShowEndDatePicker(false);
     }
     if (selectedDate && recurrence) {
+      // Validate end date is not before start date
+      if (selectedDate < taskDate) {
+        Alert.alert('Error', 'End date cannot be before the start date.');
+        return;
+      }
       setRecurrence({ ...recurrence, endDate: format(selectedDate, 'yyyy-MM-dd') });
     }
+  };
+
+  const handleTitleChange = (text: string) => {
+    if (text.length > 200) {
+      setTitleError('Length has exceeded the maximum (200 characters).');
+    } else {
+      setTitleError('');
+    }
+    setTitle(text);
+  };
+
+  const handleDescriptionChange = (text: string) => {
+    if (text.length > 500) {
+      setDescriptionError('Length has exceeded the maximum (500 characters).');
+    } else {
+      setDescriptionError('');
+    }
+    setDescription(text);
   };
 
   return (
@@ -202,19 +255,25 @@ export function AddTaskModal({
               style={styles.input}
               placeholder="Task Title"
               value={title}
-              onChangeText={setTitle}
+              onChangeText={handleTitleChange}
               maxLength={200}
             />
+            {titleError ? (
+              <Text style={{ color: 'red', fontSize: 12 }}>{titleError}</Text>
+            ) : null}
             <Text style={styles.label}>Description</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Description (optional)"
               value={description}
-              onChangeText={setDescription}
+              onChangeText={handleDescriptionChange}
               multiline
               numberOfLines={4}
               maxLength={500}
             />
+            {descriptionError ? (
+              <Text style={{ color: 'red', fontSize: 12 }}>{descriptionError}</Text>
+            ) : null}
 
             <Text style={styles.label}>Date</Text>
             {Platform.OS === 'ios' ? (
@@ -343,7 +402,7 @@ export function AddTaskModal({
                 onPress={() => setShowFrequencyModal(true)}
               >
                 <Text style={styles.frequencyText}>
-                  {recurrence ? recurrence.frequency : 'Does not repeat'}
+                  {recurrence ? (recurrence.frequency === 'none' ? 'Does not repeat' : recurrence.frequency) : 'Does not repeat'}
                 </Text>
               </TouchableOpacity>
             </View>
