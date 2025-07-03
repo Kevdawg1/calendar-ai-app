@@ -8,6 +8,8 @@ import { LifeAdminScreen } from '../screens/LifeAdminScreen';
 import { SurveyScreen } from '../screens/SurveyScreen';
 import { TaskReviewScreen } from '../screens/TaskReviewScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { UserPreferencesScreen } from '../screens/UserPreferencesScreen';
+import { NotificationSettingsScreen } from '../screens/NotificationSettingsScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { theme } from '../theme';
 import { Task } from '../types';
@@ -26,6 +28,8 @@ export type RootStackParamList = {
   LifeAdmin: undefined;
   TaskReview: { tasks: Task[] };
   Settings: undefined;
+  UserPreferences: undefined;
+  NotificationSettings: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -158,6 +162,20 @@ export const AppNavigator = () => {
         component={SettingsScreen}
         options={{
           title: 'Settings',
+        }}
+      />
+      <Stack.Screen
+        name="UserPreferences"
+        component={UserPreferencesScreen}
+        options={{
+          title: 'User Preferences',
+        }}
+      />
+      <Stack.Screen
+        name="NotificationSettings"
+        component={NotificationSettingsScreen}
+        options={{
+          title: 'Notification Settings',
         }}
       />
     </Stack.Navigator>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -13,11 +13,25 @@ import { userPreferencesService } from '../services/userPreferencesService';
 import { checkedTasksService } from '../services/checkedTasksService';
 import { theme } from '../theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { OnboardingModal } from '../components/OnboardingModal';
+
+const MENU_OPTIONS = [
+  { key: 'userPreferences', label: 'User Preferences', onPress: (navigation: NavigationProp) => navigation.navigate('UserPreferences') },
+  { key: 'syncAccounts', label: 'Sync Accounts', onPress: (_navigation: NavigationProp) => {} },
+  { key: 'notifications', label: 'Notifications', onPress: (navigation: NavigationProp) => navigation.navigate('NotificationSettings') },
+  { key: 'showTutorial', label: 'Show Tutorial', onPress: (_navigation: NavigationProp, setShowOnboarding: (show: boolean) => void) => setShowOnboarding(true) },
+  { key: 'leaveReview', label: 'Leave a Review', onPress: (_navigation: NavigationProp) => {} },
+];
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
 export const SettingsScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const handleOnboardingClose = () => {
+    setShowOnboarding(false);
+  };
 
   const clearAllAsyncStorage = async () => {
     try {
@@ -107,6 +121,19 @@ export const SettingsScreen = () => {
               Manage your app settings and data.
             </Text>
             
+            <View style={{ backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.md, overflow: 'hidden', marginBottom: theme.spacing.xl }}>
+              {MENU_OPTIONS.map((option, idx) => (
+                <TouchableOpacity
+                  key={option.key}
+                  style={sharedStyles.listItem}
+                  onPress={() => option.onPress(navigation, setShowOnboarding)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={sharedStyles.listItemText}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
             <View style={styles.dangerZone}>
               <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
               <Text style={styles.dangerZoneDescription}>
@@ -122,6 +149,12 @@ export const SettingsScreen = () => {
           </Section>
         </ScrollView>
       </View>
+      {showOnboarding && (
+        <OnboardingModal
+          isVisible={showOnboarding}
+          onClose={handleOnboardingClose}
+        />
+      )}
     </SafeAreaView>
   );
 };
