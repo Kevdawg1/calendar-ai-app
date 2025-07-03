@@ -30,6 +30,9 @@ export default {
     web: {
       favicon: "./assets/favicon.png"
     },
+    plugins: [
+      "expo-notifications"
+    ],
     extra: {
       "eas": {
         "projectId": "1012516f-4c12-4b13-aa4e-69529c933e64"

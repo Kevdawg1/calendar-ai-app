@@ -33,4 +33,5 @@ export { GoalForm } from './GoalForm';
 export { InfoModal } from './InfoModal';
 export { EditGoalModal } from './EditGoalModal';
 export { WeeklyTimeBalance } from './WeeklyTimeBalance';
-export { GoalCard } from './GoalCard'; 
+export { GoalCard } from './GoalCard';
+export { UserPreferences } from './UserPreferences'; 

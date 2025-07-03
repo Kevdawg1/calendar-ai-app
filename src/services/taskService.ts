@@ -1,6 +1,7 @@
 import { Task, TaskUpdate } from '../types';
 import { generateUUID } from '../utils/uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { notificationService } from './notificationService';
 
 const TASKS_STORAGE_KEY = '@calendar_ai_tasks';
 
@@ -271,6 +272,19 @@ export const taskService = {
     }
     
     await saveTasks();
+
+    // Schedule notifications for all new tasks
+    const allNewTasks = [...tasksWithIds, ...allRecurringTasks];
+    for (const task of allNewTasks) {
+      if (task.startTime) {
+        try {
+          await notificationService.scheduleTaskNotification(task);
+        } catch (error) {
+          console.error('Error scheduling notification for task:', task.id, error);
+        }
+      }
+    }
+
     return [...tasksWithIds, ...allRecurringTasks];
   },
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Alert, Platform, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { userPreferencesService, UserPreferences } from '../services/userPreferencesService';
 import { format } from 'date-fns';
 import { sharedStyles } from '../theme/styles';
+import { UserPreferences as UserPreferencesComponent } from '../components/UserPreferences';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -31,6 +32,40 @@ export const SurveyScreen = () => {
   const [selectedDays, setSelectedDays] = useState([0,1,2,3,4]); // Mon-Fri selected by default
   const [workStartTime, setWorkStartTime] = useState(new Date(2024, 0, 1, 9, 0));
   const [workEndTime, setWorkEndTime] = useState(new Date(2024, 0, 1, 17, 0));
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load existing preferences when component mounts
+  useEffect(() => {
+    const loadExistingPreferences = async () => {
+      try {
+        const existingPrefs = await userPreferencesService.getPreferences();
+        if (existingPrefs) {
+          setSurveyData(existingPrefs);
+          
+          // Update work schedule UI state based on existing preferences
+          if (existingPrefs.hasWorkSchedule && Object.keys(existingPrefs.workSchedule).length > 0) {
+            const workDays = Object.keys(existingPrefs.workSchedule).map(day => 
+              DAYS_OF_WEEK.indexOf(day)
+            ).filter(idx => idx !== -1);
+            setSelectedDays(workDays);
+            
+            // Set work times from the first work day
+            const firstWorkDay = Object.values(existingPrefs.workSchedule)[0];
+            if (firstWorkDay) {
+              setWorkStartTime(firstWorkDay.startTime);
+              setWorkEndTime(firstWorkDay.endTime);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading existing preferences:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadExistingPreferences();
+  }, []);
 
   // State for showing/hiding time pickers on Android
   const [showWakeUpPicker, setShowWakeUpPicker] = useState(Platform.OS === 'ios');
@@ -145,11 +180,21 @@ export const SurveyScreen = () => {
   const handleSubmit = async () => {
     try {
       await userPreferencesService.savePreferences(surveyData);
-      // Navigate to Home and reset the navigation stack to make Home the root
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
+      
+      // Check if we came from UserPreferences screen (editing mode)
+      const routes = navigation.getState().routes;
+      const previousRoute = routes[routes.length - 2]?.name;
+      
+      if (previousRoute === 'UserPreferences') {
+        // Go back to UserPreferences screen
+        navigation.goBack();
+      } else {
+        // First time setup - navigate to Home and reset the navigation stack
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      }
     } catch (error) {
       console.error('Error saving survey data:', error);
       Alert.alert('Error', 'Failed to save survey data. Please try again.');
@@ -356,53 +401,20 @@ export const SurveyScreen = () => {
   );
 
   const renderStep4 = () => (
-    <Section title="Review Your Preferences" style={sharedStyles.sectionWithMargin} flexContent>
-      <ScrollView contentContainerStyle={sharedStyles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={sharedStyles.stepContainer}>
-          <Text style={sharedStyles.description}>
-            Please review your preferences before completing the setup:
-          </Text>
-          <View style={sharedStyles.summaryContainer}>
-            <View style={sharedStyles.summaryItem}>
-              <Text style={sharedStyles.summaryLabel}>Wake Up Time:</Text>
-              <Text style={sharedStyles.summaryValue}>
-                {format(surveyData.wakeUpTime, 'h:mm a')}
-              </Text>
-            </View>
-            <View style={sharedStyles.summaryItem}>
-              <Text style={sharedStyles.summaryLabel}>Sleep Time:</Text>
-              <Text style={sharedStyles.summaryValue}>
-                {format(surveyData.sleepTime, 'h:mm a')}
-              </Text>
-            </View>
-            <View style={sharedStyles.summaryItem}>
-              <Text style={sharedStyles.summaryLabel}>Work Schedule:</Text>
-              <Text style={sharedStyles.summaryValue}>
-                {surveyData.hasWorkSchedule ? 'Yes' : 'No'}
-              </Text>
-            </View>
-            {surveyData.hasWorkSchedule && Object.keys(surveyData.workSchedule).length > 0 && (
-              <View style={sharedStyles.workScheduleSummary}>
-                <Text style={sharedStyles.summaryLabel}>Work Hours:</Text>
-                {DAYS_OF_WEEK.map(day => {
-                  const schedule = surveyData.workSchedule[day];
-                  if (!schedule) return null;
-                  return (
-                    <View key={day} style={sharedStyles.workDaySummary}>
-                      <Text style={sharedStyles.workDayLabel}>{day}:</Text>
-                      <Text style={sharedStyles.workDayTime}>
-                        {format(schedule.startTime, 'h:mm a')} - {format(schedule.endTime, 'h:mm a')}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
+    <UserPreferencesComponent preferences={surveyData} />
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={sharedStyles.container}>
+        <View style={sharedStyles.safeAreaContainer}>
+          <View style={[sharedStyles.content, { justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={sharedStyles.description}>Loading preferences...</Text>
           </View>
         </View>
-      </ScrollView>
-    </Section>
-  );
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={sharedStyles.container}>
