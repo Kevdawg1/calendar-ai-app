@@ -64,7 +64,28 @@ export const openaiService = {
       - estimatedDuration: number (in minutes)
       - priority: string (high/medium/low)
       - timeframe: string (specific date range based on the goal type's increment)
-      Return a JSON array of subtasks grouped by component.
+      
+      Return a JSON object with a "tasks" array. Each item in the array should have:
+      - component: string (name of the component)
+      - subtasks: array of subtask objects (each with title, description, estimatedDuration, priority, timeframe)
+      
+      Example format:
+      {
+        "tasks": [
+          {
+            "component": "Component Name",
+            "subtasks": [
+              {
+                "title": "Specific task",
+                "description": "Why this is important",
+                "estimatedDuration": 30,
+                "priority": "medium",
+                "timeframe": "Week 1-2"
+              }
+            ]
+          }
+        ]
+      }
       `, userPreferences);
 
       console.log('Step 2: Sending subtasks prompt');
@@ -75,21 +96,81 @@ export const openaiService = {
       try {
         const parsedResponse = parseOpenAIResponse(subtasksResponse);
         console.log('Parsed response:', parsedResponse);
+        console.log('Response type:', typeof parsedResponse);
+        console.log('Is array:', Array.isArray(parsedResponse));
+        if (typeof parsedResponse === 'object' && parsedResponse !== null) {
+          console.log('Response keys:', Object.keys(parsedResponse));
+          if (parsedResponse.tasks) {
+            console.log('Tasks type:', typeof parsedResponse.tasks);
+            console.log('Tasks is array:', Array.isArray(parsedResponse.tasks));
+          }
+        }
         
         // Handle the object structure where each component is a key with an array of subtasks
         if (typeof parsedResponse === 'object' && !Array.isArray(parsedResponse)) {
           // Check if the response has a 'tasks' property
           const tasksObject = parsedResponse.tasks || parsedResponse;
-          subtasksByComponent = Object.entries(tasksObject).flatMap(([component, subtasks]) => 
-            (subtasks as any[]).map(subtask => ({
-              ...subtask,
-              component
-            }))
-          );
+          
+          // Handle the case where tasks is an array of component objects
+          if (Array.isArray(tasksObject)) {
+            subtasksByComponent = tasksObject.flatMap((componentObj: any) => {
+              const componentName = componentObj.component || 'Unknown';
+              const subtasks = componentObj.subtasks || [];
+              
+              if (!Array.isArray(subtasks)) {
+                console.warn('Subtasks is not an array for component:', componentName);
+                return [];
+              }
+              
+              return subtasks.map((subtask: any) => ({
+                ...subtask,
+                component: componentName
+              }));
+            });
+          } else {
+            // Handle the case where tasks is an object with component keys
+            subtasksByComponent = Object.entries(tasksObject).flatMap(([component, subtasks]) => {
+              if (!Array.isArray(subtasks)) {
+                console.warn('Subtasks is not an array for component:', component);
+                return [];
+              }
+              
+              return subtasks.map((subtask: any) => ({
+                ...subtask,
+                component
+              }));
+            });
+          }
         } else if (Array.isArray(parsedResponse)) {
           subtasksByComponent = parsedResponse;
         } else {
-          throw new Error('Invalid subtasks format');
+          console.warn('Unexpected response format, attempting fallback parsing');
+          // Fallback: try to extract any array-like structure
+          if (parsedResponse && typeof parsedResponse === 'object') {
+            const allKeys = Object.keys(parsedResponse);
+            const arrayKeys = allKeys.filter(key => Array.isArray(parsedResponse[key]));
+            
+            if (arrayKeys.length > 0) {
+              console.log('Found array keys:', arrayKeys);
+              subtasksByComponent = arrayKeys.flatMap(key => {
+                const items = parsedResponse[key];
+                return items.map((item: any) => ({
+                  ...item,
+                  component: key
+                }));
+              });
+            } else {
+              throw new Error('No valid array structure found in response');
+            }
+          } else {
+            throw new Error('Invalid subtasks format');
+          }
+        }
+        
+        // Ensure we have a valid array before validation
+        if (!Array.isArray(subtasksByComponent)) {
+          console.error('subtasksByComponent is not an array:', subtasksByComponent);
+          throw new Error('Failed to extract subtasks array');
         }
         
         subtasksByComponent = validateTaskArray(subtasksByComponent, 'subtasks');
