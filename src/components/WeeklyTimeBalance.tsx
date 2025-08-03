@@ -17,10 +17,20 @@ interface WeeklyTimeBalanceProps {
 }
 
 export const WeeklyTimeBalance: React.FC<WeeklyTimeBalanceProps> = ({
-  remainingHours,
+  remainingHours = 0,
   breakdown
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
+
+  // Ensure we have valid numbers
+  const safeRemainingHours = typeof remainingHours === 'number' ? remainingHours : 0;
+  const safeBreakdown = breakdown || {
+    availableHours: 0,
+    weeklyAvailableHours: 0,
+    workHours: 0,
+    taskHours: 0,
+    remaining: 0,
+  };
 
   return (
     <>
@@ -31,8 +41,8 @@ export const WeeklyTimeBalance: React.FC<WeeklyTimeBalanceProps> = ({
       >
         <Text style={[sharedStyles.cardTitle, { color: theme.colors.primary, marginBottom: 8 }]}>Weekly Time Balance</Text>
         <Text style={sharedStyles.cardText}>
-          Remaining hours this week: <Text style={{ fontWeight: 'bold', color: remainingHours > 0 ? theme.colors.success : theme.colors.danger }}>
-            {remainingHours.toFixed(1)} hours
+          Remaining hours this week: <Text style={{ fontWeight: 'bold', color: safeRemainingHours > 0 ? theme.colors.success : theme.colors.danger }}>
+            {safeRemainingHours.toFixed(1)} hours
           </Text>
         </Text>
         <Text style={[sharedStyles.cardText, { fontSize: 12, color: theme.colors.text.secondary, marginTop: 4 }]}>Based on your sleep schedule, work hours, and existing tasks</Text>
@@ -47,10 +57,10 @@ export const WeeklyTimeBalance: React.FC<WeeklyTimeBalanceProps> = ({
           <View style={[sharedStyles.modalContent, { maxWidth: 320 }]}> 
             <Text style={sharedStyles.modalTitle}>Weekly Time Balance Breakdown</Text>
             <Text style={[sharedStyles.cardText, { lineHeight: 28, marginBottom: 20, fontFamily: 'Menlo', textAlign: 'right' }]}> 
-              {`${breakdown.weeklyAvailableHours.toFixed(1)} hours (waking hours per day)
-- ${breakdown.workHours.toFixed(1)} hours (work/study)
-- ${breakdown.taskHours.toFixed(1)} hours (scheduled tasks)
-= ${breakdown.remaining.toFixed(1)} hours`}
+              {`${safeBreakdown.weeklyAvailableHours.toFixed(1)} hours (waking hours per day)
+- ${safeBreakdown.workHours.toFixed(1)} hours (work/study)
+- ${safeBreakdown.taskHours.toFixed(1)} hours (scheduled tasks)
+= ${safeBreakdown.remaining.toFixed(1)} hours`}
             </Text>
             <TouchableOpacity
               style={[sharedStyles.modalButton, sharedStyles.saveButton]}

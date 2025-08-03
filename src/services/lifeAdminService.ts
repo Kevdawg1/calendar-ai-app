@@ -6,8 +6,24 @@ import { UserPreferences } from './userPreferencesService';
 import { getPromptWithPreferences, parseOpenAIResponse, validateTaskArray } from '../utils/promptUtils';
 import { openaiConfig } from '../config/openai';
 import { taskService } from './taskService';
+import { flexibleLifeAdminService, FlexibleSchedulingOptions } from './flexibleLifeAdminService';
 
 export const lifeAdminService = {
+  /**
+   * Schedule life admin tasks with flexible timing and weekly availability consideration
+   */
+  scheduleTasksFlexibly: async (
+    tasks: LifeAdminTask[], 
+    userPreferences?: UserPreferences,
+    options: FlexibleSchedulingOptions = {}
+  ): Promise<Task[]> => {
+    return await flexibleLifeAdminService.scheduleTasksFlexibly(tasks, userPreferences, options);
+  },
+
+  /**
+   * Legacy method - schedules tasks starting from current date
+   * @deprecated Use scheduleTasksFlexibly instead for better flexibility
+   */
   scheduleTasks: async (tasks: LifeAdminTask[], userPreferences?: UserPreferences): Promise<Task[]> => {
     try {
       console.log('Starting task scheduling for life admin tasks:', tasks);

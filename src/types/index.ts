@@ -22,6 +22,7 @@ export interface Task {
   category?: 'household' | 'laundry' | 'meal' | 'personal' | 'admin' | 'maintenance' | 'outdoor' | 'pet';
   frequency?: 'daily' | 'weekly' | 'monthly' | 'seasonal';
   enabled?: boolean;
+  priority?: 'low' | 'medium' | 'high';
   recurrence?: {
     frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'none';
     interval: number;

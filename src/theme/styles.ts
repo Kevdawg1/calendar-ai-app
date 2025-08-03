@@ -1,15 +1,54 @@
 import { StyleSheet } from 'react-native';
 import { theme } from './index';
+import { getResponsiveValue, getOptimalTabletMargins } from '../utils/deviceUtils';
 
 export const sharedStyles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    maxWidth: '100%',
     backgroundColor: theme.colors.background,
+    paddingHorizontal: getResponsiveValue(theme.spacing.md, getOptimalTabletMargins()),
   },
   safeAreaContainer: {
     flex: 1,
+    width: '100%',
+    maxWidth: '100%',
     backgroundColor: theme.colors.background,
-    padding: theme.spacing.md,
+    paddingHorizontal: getResponsiveValue(theme.spacing.md, getOptimalTabletMargins()),
+  },
+  // New aggressive tablet styles
+  tabletContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: '100%',
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 0, // Remove horizontal padding for tablets
+  },
+  tabletSafeAreaContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: '100%',
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 0, // Remove horizontal padding for tablets
+  },
+  // Force full width styles
+  forceFullWidth: {
+    flex: 1,
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: '100%',
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 0,
+    marginHorizontal: 0,
+  },
+  // Override any navigation container constraints
+  navigationOverride: {
+    flex: 1,
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: '100%',
+    backgroundColor: theme.colors.background,
   },
   header: {
     fontSize: theme.typography.sizes.xxl,

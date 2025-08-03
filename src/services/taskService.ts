@@ -2,6 +2,9 @@ import { Task, TaskUpdate } from '../types';
 import { generateUUID } from '../utils/uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationService } from './notificationService';
+import { taskReschedulingService, ReschedulingContext } from './taskReschedulingService';
+import { goalService } from './goalService';
+import { userPreferencesService } from './userPreferencesService';
 
 const TASKS_STORAGE_KEY = '@calendar_ai_tasks';
 
@@ -198,6 +201,18 @@ export const taskService = {
     }
     tasks = tasks.filter(task => task.id !== taskId);
     await saveTasks();
+  },
+
+  addTask: async (newTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task> => {
+    const taskWithMetadata = {
+      ...newTask,
+      id: generateUUID(),
+      status: 'pending' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const tasks = await taskService.addTasks([taskWithMetadata]);
+    return tasks[0];
   },
 
   addTasks: async (newTasks: Task[]): Promise<Task[]> => {
@@ -539,4 +554,137 @@ export const taskService = {
     await saveTasks();
     return [...tasks];
   },
+
+  /**
+   * Add a new task and intelligently reschedule existing tasks
+   */
+  addTaskWithRescheduling: async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task> => {
+    try {
+      console.log('Adding task with intelligent rescheduling:', task);
+
+      // Add the new task first
+      const newTask = await taskService.addTask(task);
+
+      // Get all tasks including the new one
+      const allTasks = await taskService.getAllTasks();
+      
+      // Get user goals and preferences for rescheduling context
+      const goals = await goalService.getAllGoals();
+      const userPreferences = await userPreferencesService.getPreferences();
+
+      if (!userPreferences) {
+        console.warn('No user preferences found, skipping rescheduling');
+        return newTask;
+      }
+
+      // Create rescheduling context
+      const context: ReschedulingContext = {
+        newTask: newTask,
+        existingTasks: allTasks,
+        goals: goals,
+        userPreferences: userPreferences,
+        currentDate: new Date().toISOString().split('T')[0]
+      };
+
+      // Perform intelligent rescheduling
+      const rescheduledTasks = await taskReschedulingService.rescheduleTasks(context);
+
+      // Update existing tasks with new scheduling
+      for (const rescheduledTask of rescheduledTasks) {
+        if (rescheduledTask.id !== newTask.id) { // Don't update the new task
+          await taskService.updateTask(rescheduledTask.id, {
+            startDate: rescheduledTask.startDate,
+            startTime: rescheduledTask.startTime,
+            endTime: rescheduledTask.endTime
+          });
+        }
+      }
+
+      console.log('Task rescheduling completed successfully');
+      return newTask;
+
+    } catch (error) {
+      console.error('Error adding task with rescheduling:', error);
+      // Fall back to regular task addition if rescheduling fails
+      return await taskService.addTask(task);
+    }
+  },
+
+  /**
+   * Trigger rescheduling for all tasks (useful for periodic optimization)
+   */
+  optimizeSchedule: async (): Promise<void> => {
+    try {
+      console.log('Starting schedule optimization');
+
+      const allTasks = await taskService.getAllTasks();
+      const goals = await goalService.getAllGoals();
+      const userPreferences = await userPreferencesService.getPreferences();
+
+      if (!userPreferences) {
+        console.warn('No user preferences found, skipping optimization');
+        return;
+      }
+
+      // Create rescheduling context without a new task
+      const context: ReschedulingContext = {
+        existingTasks: allTasks,
+        goals: goals,
+        userPreferences: userPreferences,
+        currentDate: new Date().toISOString().split('T')[0]
+      };
+
+      // Perform intelligent rescheduling
+      const rescheduledTasks = await taskReschedulingService.rescheduleTasks(context);
+
+      // Update all tasks with optimized scheduling
+      for (const rescheduledTask of rescheduledTasks) {
+        await taskService.updateTask(rescheduledTask.id, {
+          startDate: rescheduledTask.startDate,
+          startTime: rescheduledTask.startTime,
+          endTime: rescheduledTask.endTime
+        });
+      }
+
+      console.log('Schedule optimization completed successfully');
+
+    } catch (error) {
+      console.error('Error optimizing schedule:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Analyze task dependencies and conflicts
+   */
+  analyzeTaskDependencies: async (): Promise<any> => {
+    try {
+      console.log('Analyzing task dependencies');
+
+      const allTasks = await taskService.getAllTasks();
+      const goals = await goalService.getAllGoals();
+      const userPreferences = await userPreferencesService.getPreferences();
+
+      if (!userPreferences) {
+        console.warn('No user preferences found, skipping dependency analysis');
+        return { dependencies: [], conflicts: [] };
+      }
+
+      // Analyze dependencies
+      const dependencies = await taskReschedulingService.analyzeDependencies(allTasks, goals);
+      
+      // Identify conflicts
+      const conflicts = await taskReschedulingService.identifyConflicts(allTasks, userPreferences);
+
+      return {
+        dependencies,
+        conflicts,
+        analysisDate: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('Error analyzing task dependencies:', error);
+      throw error;
+    }
+  }
 }; 

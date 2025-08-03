@@ -3,7 +3,7 @@ export default {
     name: "AI-Cal",
     slug: "ai-cal",
     version: "1.0.0",
-    orientation: "portrait",
+    orientation: "default",
     icon: "./assets/logo.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,

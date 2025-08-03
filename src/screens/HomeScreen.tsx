@@ -8,6 +8,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { sharedStyles } from '../theme/styles';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
+import { useOrientation } from '../hooks/useOrientation';
 import { OnboardingModal } from '../components/OnboardingModal';
 import { userPreferencesService } from '../services/userPreferencesService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +20,7 @@ const IS_FIRST_TIME_USER_KEY = '@is_first_time_user';
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const { shouldUseTablet } = useOrientation();
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
@@ -75,7 +77,7 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={sharedStyles.container}>
-      <View style={sharedStyles.safeAreaContainer}>
+              <View style={shouldUseTablet ? sharedStyles.tabletSafeAreaContainer : sharedStyles.safeAreaContainer}>
         <Section title="Welcome to AI-Cal">
           <Text style={sharedStyles.description}>
             Manage your tasks, goals, and life admin tasks all in one place.
