@@ -8,6 +8,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { sharedStyles } from '../theme/styles';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
+import { shouldUseTabletLayout } from '../utils/deviceUtils';
 import { OnboardingModal } from '../components/OnboardingModal';
 import { userPreferencesService } from '../services/userPreferencesService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -75,7 +76,7 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={sharedStyles.container}>
-      <View style={sharedStyles.safeAreaContainer}>
+              <View style={shouldUseTabletLayout() ? sharedStyles.tabletSafeAreaContainer : sharedStyles.safeAreaContainer}>
         <Section title="Welcome to AI-Cal">
           <Text style={sharedStyles.description}>
             Manage your tasks, goals, and life admin tasks all in one place.
