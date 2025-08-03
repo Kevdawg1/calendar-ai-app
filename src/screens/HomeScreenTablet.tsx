@@ -99,9 +99,7 @@ const HomeScreenTablet = () => {
           <Text style={styles.subtitle}>
             Intelligent calendar assistant for tablets
           </Text>
-          <View style={styles.tabletIndicator}>
-            <Text style={styles.tabletIndicatorText}>📱 Tablet Optimized Layout</Text>
-          </View>
+
         </View>
 
         <View style={styles.menuContainer}>

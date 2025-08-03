@@ -3,12 +3,51 @@ import { Dimensions, Platform } from 'react-native';
 // Get the actual screen dimensions
 let { width, height } = Dimensions.get('window');
 
+// State to track orientation changes
+let currentOrientation = width > height ? 'landscape' : 'portrait';
+let orientationChangeCallbacks: (() => void)[] = [];
+
 // Listen for screen dimension changes
 Dimensions.addEventListener('change', ({ window }) => {
-  width = window.width;
-  height = window.height;
+  const newWidth = window.width;
+  const newHeight = window.height;
+  const newOrientation = newWidth > newHeight ? 'landscape' : 'portrait';
+  
+  // Update dimensions
+  width = newWidth;
+  height = newHeight;
+  
+  // Check if orientation actually changed
+  if (newOrientation !== currentOrientation) {
+    currentOrientation = newOrientation;
+    console.log('Orientation changed:', { 
+      from: currentOrientation === 'landscape' ? 'portrait' : 'landscape', 
+      to: currentOrientation,
+      dimensions: { width, height }
+    });
+    
+    // Notify all registered callbacks
+    orientationChangeCallbacks.forEach(callback => callback());
+  }
+  
   console.log('Screen dimensions changed:', { width, height });
 });
+
+// Function to register orientation change callbacks
+export const addOrientationChangeListener = (callback: () => void) => {
+  orientationChangeCallbacks.push(callback);
+  
+  // Return cleanup function
+  return () => {
+    const index = orientationChangeCallbacks.indexOf(callback);
+    if (index > -1) {
+      orientationChangeCallbacks.splice(index, 1);
+    }
+  };
+};
+
+// Function to get current orientation
+export const getCurrentOrientation = () => currentOrientation;
 
 // Force screen dimensions for tablets if detection is wrong
 const getActualScreenDimensions = () => {
@@ -227,16 +266,16 @@ export const getOptimalLayoutRatios = () => {
   // For larger tablets, adjust ratios to use more space
   if (screenWidth >= 1024) {
     return {
-      calendar: { left: 0.65, right: 0.35 },
-      goals: { left: 0.35, right: 0.65 },
+      calendar: { left: 0.33, right: 0.67 },
+      goals: { left: 0.45, right: 0.55 },
       lifeAdmin: { left: 0.2, center: 0.5, right: 0.3 }
     };
   }
   
   // For medium tablets
   return {
-    calendar: { left: 0.6, right: 0.4 },
-    goals: { left: 0.4, right: 0.6 },
+    calendar: { left: 0.33, right: 0.67 },
+    goals: { left: 0.45, right: 0.55 },
     lifeAdmin: { left: 0.25, center: 0.45, right: 0.3 }
   };
 };

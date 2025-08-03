@@ -288,12 +288,18 @@ export default function CalendarScreenTablet({ navigation, route }: CalendarScre
 
   return (
     <SafeAreaView style={sharedStyles.container}>
-      <SplitLayout
-        leftPanel={renderCalendarPanel()}
-        rightPanel={renderTaskListPanel()}
-        layoutType="calendar"
-        backgroundColor={theme.colors.background}
-      />
+      {isCalendarVisible ? (
+        <SplitLayout
+          leftPanel={renderCalendarPanel()}
+          rightPanel={renderTaskListPanel()}
+          layoutType="calendar"
+          backgroundColor={theme.colors.background}
+        />
+      ) : (
+        <View style={styles.fullWidthContainer}>
+          {renderTaskListPanel()}
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -462,5 +468,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: getResponsiveFontSize(14, 18),
     fontWeight: '600',
+  },
+  fullWidthContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
   },
 }); 

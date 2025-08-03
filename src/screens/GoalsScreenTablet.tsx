@@ -299,20 +299,23 @@ export const GoalsScreenTablet = () => {
         goalText={newGoalText}
         onGoalTextChange={setNewGoalText}
         selectedType={selectedType}
-        onTypeChange={setSelectedType}
+        onTypeSelect={setSelectedType}
         selectedPriority={selectedPriority}
-        onPriorityChange={setSelectedPriority}
+        onPrioritySelect={setSelectedPriority}
         timeCommitment={timeCommitment}
         onTimeCommitmentChange={setTimeCommitment}
         selectedColor={selectedColor}
-        onColorChange={setSelectedColor}
-        goalColors={GOAL_COLORS}
+        onColorSelect={setSelectedColor}
+        onTypeInfoPress={() => showInfoModal(
+          'Goal Types',
+          'Short-term: 1 month or less\nMedium-term: 1-6 months\nLong-term: 6+ months'
+        )}
+        onPriorityInfoPress={() => showInfoModal(
+          'Priority Levels',
+          'Low: Nice to have\nMedium: Important\nHigh: Critical'
+        )}
         onSubmit={handleAddGoal}
       />
-      
-      <View style={styles.timeBalanceContainer}>
-        <WeeklyTimeBalance breakdown={breakdown} />
-      </View>
     </View>
   );
 
@@ -321,6 +324,10 @@ export const GoalsScreenTablet = () => {
       <View style={styles.listHeader}>
         <Text style={styles.panelTitle}>Your Goals</Text>
         <Text style={styles.goalCount}>{goals.length} goals</Text>
+      </View>
+      
+      <View style={styles.timeBalanceContainer}>
+        <WeeklyTimeBalance breakdown={breakdown} remainingHours={remainingHours} />
       </View>
       
       {goals.length === 0 ? (
@@ -392,6 +399,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    minWidth: 0, // Allow shrinking
+    maxWidth: '100%', // Don't exceed container width
   },
   formHeader: {
     flexDirection: 'row',

@@ -34,6 +34,14 @@ type NavigationProp = StackNavigationProp<RootStackParamList>;
 export const LifeAdminScreenTablet = () => {
   const navigation = useNavigation<NavigationProp>();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  
+  // Helper function to convert camelCase to PascalCase
+  const formatCategoryName = (category: string) => {
+    return category
+      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+      .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+      .trim(); // Remove leading/trailing spaces
+  };
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [scheduledTasks, setScheduledTasks] = useState<Set<string>>(new Set());
   const [editingTask, setEditingTask] = useState<LifeAdminTask | null>(null);
@@ -227,7 +235,7 @@ export const LifeAdminScreenTablet = () => {
             onPress={() => toggleCategory(category)}
           >
             <View style={styles.categoryHeader}>
-              <Text style={styles.categoryName}>{category}</Text>
+                                <Text style={styles.categoryName}>{formatCategoryName(category)}</Text>
               <Ionicons 
                 name={expandedCategories.has(category) ? 'chevron-down' : 'chevron-forward'} 
                 size={16} 
@@ -247,7 +255,7 @@ export const LifeAdminScreenTablet = () => {
     <View style={styles.column}>
       <View style={styles.columnHeader}>
         <Text style={styles.columnTitle}>
-          {selectedCategory ? `${selectedCategory} Tasks` : 'Select a Category'}
+          {selectedCategory ? `${formatCategoryName(selectedCategory)} Tasks` : 'Select a Category'}
         </Text>
         {selectedCategory && (
           <TouchableOpacity 
@@ -325,7 +333,7 @@ export const LifeAdminScreenTablet = () => {
                   <Ionicons name="close-circle" size={16} color={theme.colors.danger} />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.taskCategory}>{task.category}</Text>
+              <Text style={styles.taskCategory}>{formatCategoryName(task.category)}</Text>
               <Text style={styles.taskFrequency}>{task.frequency}</Text>
             </View>
           );

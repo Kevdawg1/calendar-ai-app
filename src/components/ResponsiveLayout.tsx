@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { 
   getDeviceInfo, 
+  shouldUseTabletLayout,
   getResponsiveValue, 
   getOptimalTabletMargins,
   getTabletLayoutWidth,
   getOptimalLayoutRatios
 } from '../utils/deviceUtils';
+import { useOrientation } from '../hooks/useOrientation';
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode;
@@ -25,6 +27,7 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
   padding = 0,
   backgroundColor
 }) => {
+  const { shouldUseTablet } = useOrientation();
   const deviceInfo = getDeviceInfo();
   const responsivePadding = getResponsiveValue(16, getOptimalTabletMargins());
   const responsiveSpacing = getResponsiveValue(8, 12);
@@ -32,12 +35,12 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
   const layoutStyle = [
     styles.container,
     {
-      flexDirection: deviceInfo.isTablet ? 'row' : direction,
+      flexDirection: shouldUseTablet ? 'row' : direction,
       padding: padding || responsivePadding,
       gap: spacing || responsiveSpacing,
       backgroundColor,
-      width: deviceInfo.isTablet ? getTabletLayoutWidth() : '100%',
-      alignSelf: deviceInfo.isTablet ? 'center' : 'stretch',
+      width: shouldUseTablet ? getTabletLayoutWidth() : '100%',
+      alignSelf: shouldUseTablet ? 'center' : 'stretch',
     },
     style
   ];
@@ -64,6 +67,7 @@ export const SplitLayout: React.FC<SplitLayoutProps> = ({
   backgroundColor,
   layoutType = 'custom'
 }) => {
+  const { shouldUseTablet } = useOrientation();
   const deviceInfo = getDeviceInfo();
   const optimalRatios = getOptimalLayoutRatios();
   
@@ -82,7 +86,7 @@ export const SplitLayout: React.FC<SplitLayoutProps> = ({
     finalRightRatio = rightRatio || 0.5;
   }
   
-  if (!deviceInfo.isTablet) {
+  if (!shouldUseTablet) {
     // On phone, stack vertically
     return (
       <View style={[styles.splitContainer, style, { backgroundColor }]}>
@@ -122,6 +126,7 @@ export const ThreeColumnLayout: React.FC<ThreeColumnLayoutProps> = ({
   style,
   backgroundColor
 }) => {
+  const { shouldUseTablet } = useOrientation();
   const deviceInfo = getDeviceInfo();
   const optimalRatios = getOptimalLayoutRatios();
   
@@ -130,7 +135,7 @@ export const ThreeColumnLayout: React.FC<ThreeColumnLayoutProps> = ({
   const finalCenterRatio = centerRatio || optimalRatios.lifeAdmin.center;
   const finalRightRatio = rightRatio || optimalRatios.lifeAdmin.right;
   
-  if (!deviceInfo.isTablet) {
+  if (!shouldUseTablet) {
     // On phone, stack vertically
     return (
       <View style={[styles.splitContainer, style, { backgroundColor }]}>

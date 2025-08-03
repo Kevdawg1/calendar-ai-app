@@ -1,6 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { shouldUseTabletLayout } from '../utils/deviceUtils';
+import { useOrientation } from '../hooks/useOrientation';
 
 // Phone screens
 import HomeScreen from '../screens/HomeScreen';
@@ -25,6 +25,8 @@ import { RootStackParamList } from './AppNavigator';
 const Stack = createStackNavigator<RootStackParamList>();
 
 export const ResponsiveNavigator = () => {
+  const { shouldUseTablet } = useOrientation();
+  
   return (
     <Stack.Navigator
       initialRouteName="Welcome"
@@ -52,25 +54,25 @@ export const ResponsiveNavigator = () => {
       
       <Stack.Screen 
         name="Home" 
-        component={shouldUseTabletLayout() ? HomeScreenTablet : HomeScreen}
+        component={shouldUseTablet ? HomeScreenTablet : HomeScreen}
         options={{ title: 'AI-Cal' }}
       />
       
       <Stack.Screen 
         name="Calendar" 
-        component={shouldUseTabletLayout() ? CalendarScreenTablet : CalendarScreen}
+        component={shouldUseTablet ? CalendarScreenTablet : CalendarScreen}
         options={{ title: 'Calendar' }}
       />
       
       <Stack.Screen 
         name="Goals" 
-        component={shouldUseTabletLayout() ? GoalsScreenTablet : GoalsScreen}
+        component={shouldUseTablet ? GoalsScreenTablet : GoalsScreen}
         options={{ title: 'Goals' }}
       />
       
       <Stack.Screen 
         name="LifeAdmin" 
-        component={shouldUseTabletLayout() ? LifeAdminScreenTablet : LifeAdminScreen}
+        component={shouldUseTablet ? LifeAdminScreenTablet : LifeAdminScreen}
         options={{ title: 'Life Admin' }}
       />
       
