@@ -2,7 +2,7 @@ export default {
   expo: {
     name: "AI-Cal",
     slug: "ai-cal",
-    version: "1.0.0",
+    version: "2.0.0",
     orientation: "default",
     icon: "./assets/logo.png",
     userInterfaceStyle: "light",
@@ -20,6 +20,7 @@ export default {
       }
     },
     android: {
+      versionCode: 2,
       adaptiveIcon: {
         foregroundImage: "./assets/logo.png",
         backgroundColor: "#ffffff"

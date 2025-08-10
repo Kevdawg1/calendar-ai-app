@@ -62,21 +62,36 @@ export const flexibleLifeAdminService = {
       for (const [category, categoryTasks] of Object.entries(tasksByCategory)) {
         console.log(`Scheduling tasks for category: ${category}`);
         
-        const scheduledTasks = await scheduleCategoryTasks(
-          category,
-          categoryTasks,
-          weeklyAvailability,
-          existingTasks,
-          userPreferences,
-          {
-            startWeek,
-            endWeek,
-            allowTaskSplitting
-          }
-        );
+        try {
+          const scheduledTasks = await scheduleCategoryTasks(
+            category,
+            categoryTasks,
+            weeklyAvailability,
+            existingTasks,
+            userPreferences,
+            {
+              startWeek,
+              endWeek,
+              allowTaskSplitting
+            }
+          );
 
-        allScheduledTasks.push(...scheduledTasks);
+          allScheduledTasks.push(...scheduledTasks);
+          console.log(`Successfully scheduled ${scheduledTasks.length} tasks for category: ${category}`);
+        } catch (error) {
+          console.error(`Failed to schedule tasks for category: ${category}`, error);
+          // Continue with other categories instead of failing completely
+          console.log(`Continuing with other categories...`);
+        }
       }
+
+      // Check if we have any scheduled tasks
+      if (allScheduledTasks.length === 0) {
+        console.warn('No tasks were successfully scheduled. This might indicate an issue with the OpenAI service or response format.');
+        throw new Error('No tasks were scheduled successfully');
+      }
+
+      console.log(`Successfully scheduled ${allScheduledTasks.length} total tasks`);
 
       // If optimization is enabled, use the rescheduling service to optimize the schedule
       if (optimizeForUserPreferences && userPreferences) {
@@ -329,15 +344,54 @@ async function scheduleCategoryTasks(
     7. Leave buffer time between tasks
     8. Consider user's energy patterns (morning for complex tasks, evening for routine tasks)
 
-    Return ONLY a JSON array of these task objects.
+    Return ONLY a JSON array of these task objects. The response should be a valid JSON array, not wrapped in any other object.
+    
+    Example format:
+    [
+      {
+        "title": "Wash clothes",
+        "description": "Laundry - Weekly",
+        "startDate": "2024-01-15",
+        "startTime": "10:00",
+        "endTime": "11:00",
+        "recurrence": {
+          "frequency": "weekly",
+          "interval": 1,
+          "endDate": "2024-04-15"
+        }
+      }
+    ]
   `, userPreferences);
 
   const response = await makeOpenAIRequest(prompt);
   
   let scheduledTasks;
   try {
+    console.log('Raw OpenAI response for category:', category, response);
+    
     const parsedResponse = parseOpenAIResponse(response);
-    scheduledTasks = Array.isArray(parsedResponse) ? parsedResponse : parsedResponse.tasks;
+    console.log('Parsed response for category:', category, parsedResponse);
+    
+    // Handle different response formats
+    if (Array.isArray(parsedResponse)) {
+      scheduledTasks = parsedResponse;
+    } else if (parsedResponse && Array.isArray(parsedResponse.tasks)) {
+      scheduledTasks = parsedResponse.tasks;
+    } else if (parsedResponse && Array.isArray(parsedResponse.scheduledTasks)) {
+      scheduledTasks = parsedResponse.scheduledTasks;
+    } else if (parsedResponse && typeof parsedResponse === 'object') {
+      // Try to find any array property that might contain tasks
+      const arrayProps = Object.values(parsedResponse).filter(val => Array.isArray(val));
+      if (arrayProps.length > 0) {
+        scheduledTasks = arrayProps[0];
+      } else {
+        throw new Error('No task array found in response');
+      }
+    } else {
+      throw new Error('Invalid response format - expected array or object with tasks');
+    }
+    
+    console.log('Extracted tasks for category:', category, scheduledTasks);
     scheduledTasks = validateTaskArray(scheduledTasks, 'tasks');
 
     // Add metadata and validate
@@ -351,10 +405,37 @@ async function scheduleCategoryTasks(
       category: category
     }));
 
+    console.log('Final scheduled tasks for category:', category, tasksWithMetadata);
     return tasksWithMetadata;
   } catch (error) {
     console.error('Error parsing scheduled tasks for category:', category, error);
-    throw new Error(`Failed to parse scheduled tasks response for category: ${category}`);
+    console.error('Response that failed to parse:', response);
+    
+    // Fallback: Create basic scheduled tasks with default timing
+    console.log('Creating fallback tasks for category:', category);
+    const fallbackTasks = categoryTasks.map((task: LifeAdminTask) => ({
+      id: generateUUID(),
+      title: task.title,
+      description: `${task.category} - ${task.frequency}`,
+      startDate: finalOptions.startWeek,
+      startTime: getDefaultTimesForCategory(category)[0] || '10:00',
+      endTime: '11:00',
+      recurrence: {
+        frequency: (task.frequency === 'daily' ? 'daily' : 
+                   task.frequency === 'weekly' ? 'weekly' : 
+                   task.frequency === 'monthly' ? 'monthly' : 'weekly') as 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'none',
+        interval: 1,
+        endDate: finalOptions.endWeek
+      },
+      goalId: 'life-admin',
+      status: 'pending' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      category: category as 'household' | 'laundry' | 'meal' | 'personal' | 'admin' | 'maintenance' | 'outdoor' | 'pet'
+    }));
+    
+    console.log('Fallback tasks created for category:', category, fallbackTasks);
+    return fallbackTasks;
   }
 }
 
