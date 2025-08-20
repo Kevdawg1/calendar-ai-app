@@ -6,7 +6,8 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { taskService } from '../services/taskService';
 import { goalService } from '../services/goalService';
-import { Task, Goal } from '../types';
+import { meetingService } from '../services/meetingService';
+import { Task, Goal, Meeting } from '../types';
 import { Calendar } from 'react-native-calendars';
 import { format, parseISO } from 'date-fns';
 import { generateUUID } from '../utils/uuid';
@@ -14,6 +15,9 @@ import { theme } from '../theme';
 import { sharedStyles } from '../theme/styles';
 import { TimeGrid } from '../components/TimeGrid';
 import { AddTaskModal } from '../components/AddTaskModal';
+import { AddMeetingModal } from '../components/AddMeetingModal';
+import { MeetingItem } from '../components/MeetingItem';
+import { ExpandableFab } from '../components/ExpandableFab';
 import { Ionicons } from '@expo/vector-icons';
 
 type CalendarScreenProps = {
@@ -25,12 +29,15 @@ const HOUR_HEIGHT = 60; // Height of each hour row in pixels
 
 export default function CalendarScreen({ navigation, route }: CalendarScreenProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [calendarKey, setCalendarKey] = useState(0);
   const [isAddTaskModalVisible, setIsAddTaskModalVisible] = useState(false);
+  const [isAddMeetingModalVisible, setIsAddMeetingModalVisible] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | undefined>();
+  const [meetingToEdit, setMeetingToEdit] = useState<Meeting | undefined>();
   const [isEditing, setIsEditing] = useState(false);
   const [updateAll, setUpdateAll] = useState(false);
   const [isCalendarVisible, setIsCalendarVisible] = useState(true);
@@ -50,11 +57,13 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
   useEffect(() => {
     const loadData = async () => {
       try {
-        console.log('Loading tasks and goals...');
+        console.log('Loading tasks, meetings, and goals...');
         const allTasks = await taskService.getAllTasks();
+        const allMeetings = await meetingService.getAllMeetings();
         const allGoals = await goalService.getAllGoals();
         
         console.log('Loaded tasks:', allTasks);
+        console.log('Loaded meetings:', allMeetings);
         console.log('Loaded goals:', allGoals);
         
         const filteredTasks = allTasks.filter(
@@ -69,10 +78,11 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
         
         console.log('Filtered tasks:', filteredTasks);
         setTasks(filteredTasks);
+        setMeetings(allMeetings);
         setGoals(allGoals);
       } catch (error) {
         console.error('Error loading data:', error);
-        Alert.alert('Error', 'Failed to load tasks and goals');
+        Alert.alert('Error', 'Failed to load tasks, meetings, and goals');
       }
     };
 
@@ -244,6 +254,54 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     }
   };
 
+  const handleMeetingPress = (meetingId: string) => {
+    const meeting = meetings.find(m => m.id === meetingId);
+    if (!meeting) return;
+
+    setMeetingToEdit(meeting);
+    setIsEditing(true);
+    setIsAddMeetingModalVisible(true);
+  };
+
+  const handleDeleteMeeting = async (meetingId: string) => {
+    Alert.alert(
+      'Delete Meeting',
+      'Are you sure you want to delete this meeting?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await meetingService.deleteMeeting(meetingId);
+              setMeetings(prevMeetings => prevMeetings.filter(meeting => meeting.id !== meetingId));
+            } catch (error) {
+              console.error('Error deleting meeting:', error);
+              Alert.alert('Error', 'Failed to delete meeting');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleMeetingStatusChange = async (meetingId: string, newStatus: Meeting['status']) => {
+    try {
+      const updatedMeeting = await meetingService.updateMeeting(meetingId, { status: newStatus });
+      if (updatedMeeting) {
+        setMeetings(prevMeetings =>
+          prevMeetings.map(meeting =>
+            meeting.id === meetingId ? updatedMeeting : meeting
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error updating meeting status:', error);
+      Alert.alert('Error', 'Failed to update meeting status');
+    }
+  };
+
   const handleAddTask = async (taskData: {
     title: string;
     description: string;
@@ -320,6 +378,75 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     }
   };
 
+  const handleAddMeeting = async (meetingData: {
+    title: string;
+    description: string;
+    location: string;
+    type: Meeting['type'];
+    priority: Meeting['priority'];
+    goalId?: string;
+    startDate: string;
+    startTime: string;
+    endTime: string;
+    status: Meeting['status'];
+    recurrence?: Meeting['recurrence'];
+  }) => {
+    if (isEditing && meetingToEdit) {
+      try {
+        const updatedMeeting = await meetingService.updateMeeting(meetingToEdit.id, {
+          title: meetingData.title,
+          description: meetingData.description,
+          location: meetingData.location,
+          type: meetingData.type,
+          priority: meetingData.priority,
+          goalId: meetingData.goalId,
+          startDate: meetingData.startDate,
+          startTime: meetingData.startTime,
+          endTime: meetingData.endTime,
+          status: meetingData.status,
+          recurrence: meetingData.recurrence,
+        });
+        
+        if (updatedMeeting) {
+          setMeetings(prevMeetings =>
+            prevMeetings.map(meeting =>
+              meeting.id === meetingToEdit.id ? updatedMeeting : meeting
+            )
+          );
+        }
+        
+        setIsAddMeetingModalVisible(false);
+        setMeetingToEdit(undefined);
+        setIsEditing(false);
+      } catch (error) {
+        console.error('Error updating meeting:', error);
+        Alert.alert('Error', 'Failed to update meeting');
+      }
+    } else {
+      try {
+        const newMeeting = await meetingService.addMeeting({
+          title: meetingData.title,
+          description: meetingData.description,
+          location: meetingData.location,
+          type: meetingData.type,
+          priority: meetingData.priority,
+          goalId: meetingData.goalId,
+          startDate: meetingData.startDate,
+          startTime: meetingData.startTime,
+          endTime: meetingData.endTime,
+          status: meetingData.status,
+          recurrence: meetingData.recurrence,
+        });
+
+        setMeetings(prevMeetings => [...prevMeetings, newMeeting]);
+        setIsAddMeetingModalVisible(false);
+      } catch (error) {
+        console.error('Error adding meeting:', error);
+        Alert.alert('Error', 'Failed to add meeting');
+      }
+    }
+  };
+
   const getTasksForDate = (date: string) => {
     const tasksForDay = tasks.filter(task => {
       if (!task.startDate || !task.goalId || !task.status || !task.createdAt || !task.updatedAt) {
@@ -347,14 +474,58 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
     });
   };
 
+  const getMeetingsForDate = (date: string) => {
+    const meetingsForDay = meetings.filter(meeting => {
+      if (!meeting.startDate || !meeting.status || !meeting.createdAt || !meeting.updatedAt) {
+        console.log('Meeting filtered out due to missing required fields:', meeting);
+        return false;
+      }
+      
+      if (meeting.startDate === date) {
+        console.log('Meeting matches date:', meeting);
+        return true;
+      }
+      
+      return false;
+    });
+    
+    console.log(`Meetings for ${date}:`, meetingsForDay);
+    return meetingsForDay.sort((a, b) => {
+      if (!a.startTime || !b.startTime) return 0;
+      const timeA = a.startTime.split(':').map(Number);
+      const timeB = b.startTime.split(':').map(Number);
+      if (timeA[0] !== timeB[0]) {
+        return timeA[0] - timeB[0];
+      }
+      return timeA[1] - timeB[1];
+    });
+  };
+
   const getGoalColor = (goalId: string) => {
     if (goalId === 'life-admin') return '#007AFF';
     const goal = goals.find(g => g.id === goalId);
     return goal?.color || '#FF9500';
   };
 
-  const getMarkedDates = (tasks: Task[]) => {
-    console.log('Getting marked dates for tasks:', tasks);
+  const getMeetingColor = (type: Meeting['type']) => {
+    switch (type) {
+      case 'work':
+        return theme.colors.primary;
+      case 'personal':
+        return theme.colors.secondary;
+      case 'social':
+        return theme.colors.info;
+      case 'health':
+        return theme.colors.success;
+      case 'education':
+        return theme.colors.warning;
+      default:
+        return theme.colors.text.secondary;
+    }
+  };
+
+  const getMarkedDates = (tasks: Task[], meetings: Meeting[]) => {
+    console.log('Getting marked dates for tasks and meetings:', tasks, meetings);
     const marked: { [key: string]: any } = {};
     
     // Always mark the selected date
@@ -375,6 +546,19 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
       if (!marked[task.startDate].dots.some((dot: any) => dot.color === color)) {
         marked[task.startDate].dots.push({ color, key: task.id });
         console.log('Added dot for task on date:', task.startDate, 'with color:', color);
+      }
+    });
+
+    meetings.forEach(meeting => {
+      const color = getMeetingColor(meeting.type);
+      console.log('Processing meeting:', meeting.id, 'with color:', color);
+      
+      if (!marked[meeting.startDate]) {
+        marked[meeting.startDate] = { dots: [] };
+      }
+      if (!marked[meeting.startDate].dots.some((dot: any) => dot.color === color)) {
+        marked[meeting.startDate].dots.push({ color, key: meeting.id });
+        console.log('Added dot for meeting on date:', meeting.startDate, 'with color:', color);
       }
     });
     
@@ -417,7 +601,7 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
               current={currentMonth}
               onMonthChange={handleMonthChange}
               onDayPress={handleDayPress}
-              markedDates={getMarkedDates(tasks)}
+              markedDates={getMarkedDates(tasks, meetings)}
               markingType="multi-dot"
               theme={{
                 todayTextColor: theme.colors.primary,
@@ -481,21 +665,23 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
 
           <TimeGrid
             tasks={getTasksForDate(selectedDate)}
+            meetings={getMeetingsForDate(selectedDate)}
             onTaskPress={handleTaskPress}
             onTaskDelete={handleDeleteTask}
             onStatusChange={handleStatusChange}
+            onMeetingPress={handleMeetingPress}
+            onMeetingDelete={handleDeleteMeeting}
+            onMeetingStatusChange={handleMeetingStatusChange}
             getGoalText={getGoalText}
             getGoalColor={getGoalColor}
+            getMeetingColor={getMeetingColor}
           />
         </ScrollView>
 
-        <TouchableOpacity
-          style={sharedStyles.fab}
-          onPress={() => setIsAddTaskModalVisible(true)}
-          accessibilityLabel="Add Task"
-        >
-          <Ionicons name="add" size={32} color="#fff" />
-        </TouchableOpacity>
+        <ExpandableFab
+          onAddTask={() => setIsAddTaskModalVisible(true)}
+          onAddMeeting={() => setIsAddMeetingModalVisible(true)}
+        />
 
         {isAddTaskModalVisible && (
           <AddTaskModal
@@ -511,6 +697,22 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
             taskToEdit={taskToEdit}
             isEditing={isEditing}
             updateAll={updateAll}
+          />
+        )}
+
+        {isAddMeetingModalVisible && (
+          <AddMeetingModal
+            isVisible={isAddMeetingModalVisible}
+            onClose={() => {
+              setIsAddMeetingModalVisible(false);
+              setMeetingToEdit(undefined);
+              setIsEditing(false);
+            }}
+            onSubmit={handleAddMeeting}
+            selectedDate={selectedDate}
+            meetingToEdit={meetingToEdit}
+            isEditing={isEditing}
+            goals={goals}
           />
         )}
       </View>

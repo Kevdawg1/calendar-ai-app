@@ -1,5 +1,6 @@
 // Existing components
 export { AddTaskModal } from './AddTaskModal';
+export { AddMeetingModal } from './AddMeetingModal';
 export { Badge } from './Badge';
 export { Button } from './Button';
 export { Card } from './Card';
@@ -7,6 +8,7 @@ export { CategorySection } from './CategorySection';
 export { EmptyState } from './EmptyState';
 export { ErrorBoundary } from './ErrorBoundary';
 export { ErrorState } from './ErrorState';
+export { ExpandableFab } from './ExpandableFab';
 export { FormField } from './FormField';
 export { FrequencyModal } from './FrequencyModal';
 export { GoalItem } from './GoalItem';
@@ -15,6 +17,7 @@ export { IconButton } from './IconButton';
 export { Input } from './Input';
 export { LifeAdminTaskItem } from './LifeAdminTaskItem';
 export { LoadingState } from './LoadingState';
+export { MeetingItem } from './MeetingItem';
 export { Modal } from './Modal';
 export { OnboardingModal } from './OnboardingModal';
 export { Section } from './Section';
