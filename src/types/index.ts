@@ -44,4 +44,59 @@ export interface TaskUpdate {
     endDate: string;
   };
   recurringGroupId?: string;
+}
+
+export interface Meeting {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  attendees?: string[];
+  type: 'work' | 'personal' | 'social' | 'health' | 'education' | 'other';
+  priority: 'low' | 'medium' | 'high';
+  status: 'scheduled' | 'completed' | 'cancelled';
+  goalId?: string;
+  createdAt: string;
+  updatedAt: string;
+  sentiment?: {
+    positive: number;
+    negative: number;
+    neutral: number;
+    keywords: string[];
+  };
+  relatedTaskIds?: string[];
+  recurrence?: {
+    frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'none';
+    interval: number;
+    endDate: string;
+  };
+}
+
+export interface MeetingUpdate {
+  title?: string;
+  description?: string;
+  startDate?: string;
+  startTime?: string;
+  endTime?: string;
+  location?: string;
+  attendees?: string[];
+  type?: 'work' | 'personal' | 'social' | 'health' | 'education' | 'other';
+  priority?: 'low' | 'medium' | 'high';
+  status?: 'scheduled' | 'completed' | 'cancelled';
+  goalId?: string;
+  sentiment?: {
+    positive: number;
+    negative: number;
+    neutral: number;
+    keywords: string[];
+  };
+  relatedTaskIds?: string[];
+  recurrence?: {
+    frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'none';
+    interval: number;
+    endDate: string;
+  };
 } 

@@ -40,30 +40,49 @@ export const openaiService = {
         throw new Error('Failed to parse components response');
       }
 
+      // Calculate goal timeline based on goal type
       let taskPeriodIncrement = 0;
+      let goalDurationMonths = 0;
+      
       if (goals[0].type === 'short') {
         taskPeriodIncrement = 1;
+        goalDurationMonths = 3; // 1-3 months for short term goals
       } else if (goals[0].type === 'medium') {
         taskPeriodIncrement = 3;
+        goalDurationMonths = 12; // 3-12 months for medium term goals
       } else if (goals[0].type === 'long') {
         taskPeriodIncrement = 12;
+        goalDurationMonths = 60; // 1-5 years for long term goals
       }
+      
       let taskPeriodStart = new Date();
       let taskPeriodEnd = new Date();
-      taskPeriodEnd.setMonth(taskPeriodStart.getMonth() + taskPeriodIncrement);
+      taskPeriodEnd.setMonth(taskPeriodStart.getMonth() + goalDurationMonths);
 
       // Step 2: Generate subtasks for each component
       const subtasksPrompt = getPromptWithPreferences(`
-      For each key component, generate specific subtasks over the ${taskPeriodIncrement} month period.
+      For each key component, generate specific subtasks over the ${goalDurationMonths} month period.
       Consider the weekly time commitment of ${goals[0].timeCommitment} hours.
+      
+      Goal Timeline:
+      - Goal Type: ${goals[0].type} term
+      - Duration: ${goalDurationMonths} months
+      - Distribution: Spread tasks evenly across the timeline
+      
       Components:
       ${JSON.stringify(components, null, 2)}
+      
       For each subtask, provide:
       - title: string (specific action item)
       - description: string (reasoning for why this task is important)
       - estimatedDuration: number (in minutes)
       - priority: string (high/medium/low)
-      - timeframe: string (specific date range based on the goal type's increment)
+      - timeframe: string (specific month/quarter range within the ${goalDurationMonths} month period)
+      
+      IMPORTANT: Distribute subtasks across the entire ${goalDurationMonths} month timeline:
+      - Short term (3 months): Spread across months 1, 2, 3
+      - Medium term (12 months): Spread across quarters 1-4
+      - Long term (60 months): Spread across years 1-5
       
       Return a JSON object with a "tasks" array. Each item in the array should have:
       - component: string (name of the component)
@@ -80,7 +99,7 @@ export const openaiService = {
                 "description": "Why this is important",
                 "estimatedDuration": 30,
                 "priority": "medium",
-                "timeframe": "Week 1-2"
+                "timeframe": "Month 1-2"
               }
             ]
           }
@@ -184,10 +203,16 @@ export const openaiService = {
       Format the following subtasks into calendar-ready tasks:
       ${JSON.stringify(subtasksByComponent, null, 2)}
       Current date: ${currentDate.toISOString().split('T')[0]}
+      
+      Goal Timeline:
+      - Goal Type: ${goals[0].type} term
+      - Duration: ${goalDurationMonths} months (${taskPeriodStart.toISOString().split('T')[0]} to ${taskPeriodEnd.toISOString().split('T')[0]})
+      - Weekly Time Commitment: ${goals[0].timeCommitment} hours
+      
       For each task, provide a JSON object with:
       - title: string (clear, actionable task name)
       - description: string (brief explanation of what needs to be done)
-      - startDate: string (YYYY-MM-DD, use ${taskPeriodStart.toISOString().split('T')[0]})
+      - startDate: string (YYYY-MM-DD, distribute across the ${goalDurationMonths} month period)
       - startTime: string (HH:MM, suggest appropriate time based on task type)
       - endTime: string (HH:MM)
       - recurrence: object (if task should repeat)
@@ -195,13 +220,21 @@ export const openaiService = {
         - interval: number (1 for daily/weekly/monthly, 3 for seasonal)
         - endDate: string (YYYY-MM-DD, use ${taskPeriodEnd.toISOString().split('T')[0]})
       - goalId: string (${goals[0].id})
-      Consider:
-      - Spread tasks across available time
-      - Respect the goal's weekly time commitment
-      - Group related tasks together
-      - Account for task dependencies
-      - Schedule tasks between ${taskPeriodStart.toISOString().split('T')[0]} and ${taskPeriodEnd.toISOString().split('T')[0]}
+      
+      CRITICAL SCHEDULING REQUIREMENTS:
+      1. DISTRIBUTE tasks evenly across the ${goalDurationMonths} month timeline
+      2. Do NOT schedule all tasks on the same day or week
+      3. Spread tasks throughout the goal duration period
+      4. Consider the goal type:
+         - Short term (1-3 months): Spread tasks across 3 months
+         - Medium term (3-12 months): Spread tasks across 12 months  
+         - Long term (1-5 years): Spread tasks across 5 years
+      5. Respect the weekly time commitment of ${goals[0].timeCommitment} hours
+      6. Group related tasks together when beneficial
+      7. Account for task dependencies
+      8. Schedule tasks between ${taskPeriodStart.toISOString().split('T')[0]} and ${taskPeriodEnd.toISOString().split('T')[0]}
       ${existingTasks ? 'Consider existing tasks and avoid scheduling conflicts.' : ''}
+      
       Do not schedule tasks during work/study or sleep hours.
       Return ONLY a JSON array of these task objects.
       `, userPreferences);

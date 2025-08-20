@@ -1,9 +1,11 @@
 import axios from 'axios';
-import { Task, Goal } from '../types';
+import { Task, Goal, Meeting } from '../types';
 import { UserPreferences } from './userPreferencesService';
 import { getPromptWithPreferences, parseOpenAIResponse, validateTaskArray } from '../utils/promptUtils';
 import { openaiConfig } from '../config/openai';
 import { taskService } from './taskService';
+import { meetingService } from './meetingService';
+import { sentimentAnalysisService } from './sentimentAnalysisService';
 
 export interface TaskDependency {
   taskId: string;
@@ -18,18 +20,37 @@ export interface ReschedulingContext {
   goals: Goal[];
   userPreferences: UserPreferences;
   currentDate: string;
+  meetings?: Meeting[];
 }
 
 export const taskReschedulingService = {
   /**
-   * Reschedules tasks intelligently based on new task additions, priorities, and dependencies
+   * Reschedules tasks intelligently based on new task additions, priorities, dependencies, and meetings
    */
   rescheduleTasks: async (context: ReschedulingContext): Promise<Task[]> => {
     try {
       console.log('Starting intelligent task rescheduling:', context);
 
+      // Get meetings if not provided
+      let meetings = context.meetings;
+      if (!meetings) {
+        const allMeetings = await meetingService.getAllMeetings();
+        const weekStart = new Date(context.currentDate);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        
+        meetings = await meetingService.getMeetingsByWeek(
+          weekStart.toISOString().split('T')[0],
+          weekEnd.toISOString().split('T')[0]
+        );
+      }
+
+      // Find tasks that should be completed before meetings
+      const tasksToReschedule = await findTasksForMeetingPrerequisites(context.existingTasks, meetings);
+
       const systemPrompt = getReschedulingSystemPrompt();
-      const userPrompt = buildReschedulingPrompt(context);
+      const userPrompt = buildReschedulingPrompt({ ...context, meetings });
       
       const response = await makeOpenAIRequest(systemPrompt, userPrompt);
       
@@ -110,6 +131,27 @@ export const taskReschedulingService = {
   }
 };
 
+/**
+ * Find tasks that should be completed before meetings based on sentiment analysis
+ */
+async function findTasksForMeetingPrerequisites(tasks: Task[], meetings: Meeting[]): Promise<Task[]> {
+  const tasksToReschedule: Task[] = [];
+  
+  for (const meeting of meetings) {
+    if (meeting.status === 'scheduled') {
+      const prerequisiteTasks = await sentimentAnalysisService.getPrerequisiteTasks(meeting, tasks);
+      tasksToReschedule.push(...prerequisiteTasks);
+    }
+  }
+  
+  // Remove duplicates
+  const uniqueTasks = tasksToReschedule.filter((task, index, self) => 
+    index === self.findIndex(t => t.id === task.id)
+  );
+  
+  return uniqueTasks;
+}
+
 function getReschedulingSystemPrompt(): string {
   return `You are an intelligent task scheduling assistant that specializes in optimizing calendar schedules based on task priorities, dependencies, and user preferences. Your role is to:
 
@@ -142,9 +184,9 @@ Return a JSON array of rescheduled tasks with updated startDate, startTime, and 
 }
 
 function buildReschedulingPrompt(context: ReschedulingContext): string {
-  const { newTask, existingTasks, goals, userPreferences, currentDate } = context;
+  const { newTask, existingTasks, goals, userPreferences, currentDate, meetings = [] } = context;
   
-  let prompt = `Please reschedule the following tasks to optimize the calendar based on priorities, dependencies, and user preferences:
+  let prompt = `Please reschedule the following tasks to optimize the calendar based on priorities, dependencies, user preferences, and upcoming meetings:
 
 **Current Date:** ${currentDate}
 
@@ -152,6 +194,15 @@ function buildReschedulingPrompt(context: ReschedulingContext): string {
 ${goals.map(goal => `
 - ${goal.text} (${goal.type} term, ${goal.priority} priority, ${goal.timeCommitment} hours/week)
 `).join('\n')}
+
+**Upcoming Meetings:**
+${meetings.length > 0 ? meetings.map(meeting => `
+- ${meeting.title}
+  Date: ${meeting.startDate} ${meeting.startTime} - ${meeting.endTime}
+  Type: ${meeting.type}
+  Priority: ${meeting.priority}
+  Description: ${meeting.description || 'N/A'}
+`).join('\n') : '- No upcoming meetings'}
 
 **Existing Tasks:**
 ${existingTasks.map(task => `
@@ -187,6 +238,9 @@ ${existingTasks.map(task => `
 6. Respect user's available time blocks and preferences
 7. Maintain progress toward all active goals
 8. Avoid scheduling conflicts and overlaps
+9. **CRITICAL: Schedule tasks that prepare for meetings BEFORE the meeting date**
+10. Consider meeting sentiment and type when scheduling related tasks
+11. Ensure tasks that support meeting outcomes are completed before the meeting
 
 **Return Format:**
 Provide a JSON array of rescheduled tasks. Each task object should include:
