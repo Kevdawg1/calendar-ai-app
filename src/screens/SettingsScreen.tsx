@@ -146,6 +146,10 @@ export const SettingsScreen = () => {
                 variant="danger"
               />
             </View>
+            
+            <View style={styles.versionContainer}>
+              <Text style={styles.versionText}>Version 2.1.0</Text>
+            </View>
           </Section>
         </ScrollView>
       </View>
@@ -181,5 +185,15 @@ const styles = {
   },
   resetButton: {
     backgroundColor: theme.colors.danger,
+  },
+  versionContainer: {
+    marginTop: theme.spacing.xl,
+    alignItems: 'center' as const,
+    paddingVertical: theme.spacing.md,
+  },
+  versionText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+    textAlign: 'center' as const,
   },
 }; 
