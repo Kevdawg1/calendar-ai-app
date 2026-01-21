@@ -11,16 +11,16 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { theme } from '../theme';
 import { sharedStyles } from '../theme/styles';
-import { Section } from '../components/Section';
-import { EmptyState } from '../components/EmptyState';
-import { Button as CustomButton } from '../components/Button';
+import { Section } from '../components/layout/Section';
+import { EmptyState } from '../components/display/EmptyState';
+import { Button as CustomButton } from '../components/buttons/Button';
 import { userPreferencesService, UserPreferences } from '../services/userPreferencesService';
 import { taskService } from '../services/taskService';
-import { GoalForm } from '../components/GoalForm';
-import { EditGoalModal } from '../components/EditGoalModal';
-import { InfoModal } from '../components/InfoModal';
-import { WeeklyTimeBalance } from '../components/WeeklyTimeBalance';
-import { GoalCard } from '../components/GoalCard';
+import { GoalForm } from '../components/forms/GoalForm';
+import { EditGoalModal } from '../components/modals/EditGoalModal';
+import { InfoModal } from '../components/modals/InfoModal';
+import { WeeklyTimeBalance } from '../components/display/WeeklyTimeBalance';
+import { GoalCard } from '../components/cards/GoalCard';
 
 const GOAL_COLORS = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#5AC8FA', '#FFD60A'];
 

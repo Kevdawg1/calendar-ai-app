@@ -6,8 +6,7 @@ import {
   ScrollView, 
   Alert, 
   FlatList, 
-  ActivityIndicator,
-  StyleSheet
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -19,17 +18,18 @@ import { Goal, Task } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { sharedStyles } from '../theme/styles';
-import { Section } from '../components/Section';
-import { EmptyState } from '../components/EmptyState';
-import { Button as CustomButton } from '../components/Button';
+import { goalsScreenTabletStyles } from '../styles/screens';
+import { Section } from '../components/layout/Section';
+import { EmptyState } from '../components/display/EmptyState';
+import { Button as CustomButton } from '../components/buttons/Button';
 import { userPreferencesService, UserPreferences } from '../services/userPreferencesService';
 import { taskService } from '../services/taskService';
-import { GoalForm } from '../components/GoalForm';
-import { EditGoalModal } from '../components/EditGoalModal';
-import { InfoModal } from '../components/InfoModal';
-import { WeeklyTimeBalance } from '../components/WeeklyTimeBalance';
-import { GoalCard } from '../components/GoalCard';
-import { SplitLayout } from '../components/ResponsiveLayout';
+import { GoalForm } from '../components/forms/GoalForm';
+import { EditGoalModal } from '../components/modals/EditGoalModal';
+import { InfoModal } from '../components/modals/InfoModal';
+import { WeeklyTimeBalance } from '../components/display/WeeklyTimeBalance';
+import { GoalCard } from '../components/cards/GoalCard';
+import { SplitLayout } from '../components/layout/ResponsiveLayout';
 import { getResponsiveValue, getResponsiveFontSize } from '../utils/deviceUtils';
 
 const GOAL_COLORS = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#5AC8FA', '#FFD60A'];
@@ -281,11 +281,11 @@ export const GoalsScreenTablet = () => {
   );
 
   const renderGoalFormPanel = () => (
-    <View style={styles.formPanel}>
-      <View style={styles.formHeader}>
-        <Text style={styles.panelTitle}>Add New Goal</Text>
+    <View style={goalsScreenTabletStyles.formPanel}>
+      <View style={goalsScreenTabletStyles.formHeader}>
+        <Text style={goalsScreenTabletStyles.panelTitle}>Add New Goal</Text>
         <TouchableOpacity
-          style={styles.infoButton}
+          style={goalsScreenTabletStyles.infoButton}
           onPress={() => showInfoModal(
             'Goal Types',
             'Short-term: 1 month or less\nMedium-term: 1-6 months\nLong-term: 6+ months'
@@ -320,13 +320,13 @@ export const GoalsScreenTablet = () => {
   );
 
   const renderGoalListPanel = () => (
-    <View style={styles.listPanel}>
-      <View style={styles.listHeader}>
-        <Text style={styles.panelTitle}>Your Goals</Text>
-        <Text style={styles.goalCount}>{goals.length} goals</Text>
+    <View style={goalsScreenTabletStyles.listPanel}>
+      <View style={goalsScreenTabletStyles.listHeader}>
+        <Text style={goalsScreenTabletStyles.panelTitle}>Your Goals</Text>
+        <Text style={goalsScreenTabletStyles.goalCount}>{goals.length} goals</Text>
       </View>
       
-      <View style={styles.timeBalanceContainer}>
+      <View style={goalsScreenTabletStyles.timeBalanceContainer}>
         <WeeklyTimeBalance breakdown={breakdown} remainingHours={remainingHours} />
       </View>
       
@@ -341,8 +341,8 @@ export const GoalsScreenTablet = () => {
           data={goals}
           renderItem={renderGoalItem}
           keyExtractor={(item) => item.id}
-          style={styles.goalList}
-          contentContainerStyle={styles.goalListContent}
+          style={goalsScreenTabletStyles.goalList}
+          contentContainerStyle={goalsScreenTabletStyles.goalListContent}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -385,66 +385,4 @@ export const GoalsScreenTablet = () => {
       />
     </SafeAreaView>
   );
-};
-
-const styles = StyleSheet.create({
-  formPanel: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    margin: getResponsiveValue(8, 12),
-    padding: getResponsiveValue(12, 16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    minWidth: 0, // Allow shrinking
-    maxWidth: '100%', // Don't exceed container width
-  },
-  formHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: getResponsiveValue(16, 20),
-  },
-  panelTitle: {
-    fontSize: getResponsiveFontSize(18, 22),
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-  },
-  infoButton: {
-    padding: 4,
-  },
-  timeBalanceContainer: {
-    marginTop: getResponsiveValue(16, 20),
-  },
-  listPanel: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    margin: getResponsiveValue(8, 12),
-    padding: getResponsiveValue(12, 16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  listHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: getResponsiveValue(16, 20),
-  },
-  goalCount: {
-    fontSize: getResponsiveFontSize(14, 16),
-    color: theme.colors.text.secondary,
-  },
-  goalList: {
-    flex: 1,
-  },
-  goalListContent: {
-    paddingBottom: 20,
-  },
-}); 
+}; 

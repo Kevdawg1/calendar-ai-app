@@ -6,13 +6,13 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Feather } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../theme';
-import { Section } from '../components/Section';
-import { Button } from '../components/Button';
+import { Section } from '../components/layout/Section';
+import { Button } from '../components/buttons/Button';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { userPreferencesService, UserPreferences } from '../services/userPreferencesService';
 import { format } from 'date-fns';
 import { sharedStyles } from '../theme/styles';
-import { UserPreferences as UserPreferencesComponent } from '../components/UserPreferences';
+import { UserPreferences as UserPreferencesComponent } from '../components/display/UserPreferences';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 

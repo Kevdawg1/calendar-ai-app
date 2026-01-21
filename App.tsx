@@ -4,7 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { enableScreens } from 'react-native-screens';
 import { ResponsiveNavigator } from './src/navigation/ResponsiveNavigator';
-import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { ErrorBoundary } from './src/components/display/ErrorBoundary';
 import { StyleSheet, View } from 'react-native';
 
 // Enable screens for better performance

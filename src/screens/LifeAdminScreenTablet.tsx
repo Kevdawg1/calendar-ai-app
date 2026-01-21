@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  StyleSheet,
   FlatList
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,18 +14,19 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../theme';
 import { sharedStyles } from '../theme/styles';
-import { Button } from '../components/Button';
-import { Section } from '../components/Section';
+import { lifeAdminScreenTabletStyles } from '../styles/screens';
+import { Button } from '../components/buttons/Button';
+import { Section } from '../components/layout/Section';
 import { lifeAdminTasks, LifeAdminTask } from '../data/lifeAdminTasks';
 import { Ionicons } from '@expo/vector-icons';
 import { lifeAdminService } from '../services/lifeAdminService';
 import { taskService } from '../services/taskService';
-import { LifeAdminTaskItem } from '../components/LifeAdminTaskItem';
-import { CategorySection } from '../components/CategorySection';
-import { FrequencyModal } from '../components/FrequencyModal';
+import { LifeAdminTaskItem } from '../components/cards/LifeAdminTaskItem';
+import { CategorySection } from '../components/layout/CategorySection';
+import { FrequencyModal } from '../components/modals/FrequencyModal';
 import { userPreferencesService, UserPreferences } from '../services/userPreferencesService';
 import { checkedTasksService } from '../services/checkedTasksService';
-import { ThreeColumnLayout } from '../components/ResponsiveLayout';
+import { ThreeColumnLayout } from '../components/layout/ResponsiveLayout';
 import { getResponsiveValue, getResponsiveFontSize } from '../utils/deviceUtils';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
@@ -216,33 +216,33 @@ export const LifeAdminScreenTablet = () => {
   };
 
   const renderCategoryColumn = () => (
-    <View style={styles.column}>
-      <View style={styles.columnHeader}>
-        <Text style={styles.columnTitle}>Categories</Text>
-        <TouchableOpacity onPress={handleCollapseAll} style={styles.collapseButton}>
+    <View style={lifeAdminScreenTabletStyles.column}>
+      <View style={lifeAdminScreenTabletStyles.columnHeader}>
+        <Text style={lifeAdminScreenTabletStyles.columnTitle}>Categories</Text>
+        <TouchableOpacity onPress={handleCollapseAll} style={lifeAdminScreenTabletStyles.collapseButton}>
           <Ionicons name="contract-outline" size={20} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
       
-      <ScrollView style={styles.columnContent}>
+      <ScrollView style={lifeAdminScreenTabletStyles.columnContent}>
         {Array.from(new Set(tasks.map(task => task.category))).map(category => (
           <TouchableOpacity
             key={category}
             style={[
-              styles.categoryItem,
-              selectedCategory === category && styles.selectedCategoryItem
+              lifeAdminScreenTabletStyles.categoryItem,
+              selectedCategory === category && lifeAdminScreenTabletStyles.selectedCategoryItem
             ]}
             onPress={() => toggleCategory(category)}
           >
-            <View style={styles.categoryHeader}>
-                                <Text style={styles.categoryName}>{formatCategoryName(category)}</Text>
+            <View style={lifeAdminScreenTabletStyles.categoryHeader}>
+                                <Text style={lifeAdminScreenTabletStyles.categoryName}>{formatCategoryName(category)}</Text>
               <Ionicons 
                 name={expandedCategories.has(category) ? 'chevron-down' : 'chevron-forward'} 
                 size={16} 
                 color={theme.colors.text.secondary} 
               />
             </View>
-            <Text style={styles.categoryCount}>
+            <Text style={lifeAdminScreenTabletStyles.categoryCount}>
               {getCategoryTasks(category).length} tasks
             </Text>
           </TouchableOpacity>
@@ -252,46 +252,46 @@ export const LifeAdminScreenTablet = () => {
   );
 
   const renderTasksColumn = () => (
-    <View style={styles.column}>
-      <View style={styles.columnHeader}>
-        <Text style={styles.columnTitle}>
+    <View style={lifeAdminScreenTabletStyles.column}>
+      <View style={lifeAdminScreenTabletStyles.columnHeader}>
+        <Text style={lifeAdminScreenTabletStyles.columnTitle}>
           {selectedCategory ? `${formatCategoryName(selectedCategory)} Tasks` : 'Select a Category'}
         </Text>
         {selectedCategory && (
           <TouchableOpacity 
             onPress={() => toggleCategoryAll(selectedCategory)}
-            style={styles.selectAllButton}
+            style={lifeAdminScreenTabletStyles.selectAllButton}
           >
-            <Text style={styles.selectAllText}>Select All</Text>
+            <Text style={lifeAdminScreenTabletStyles.selectAllText}>Select All</Text>
           </TouchableOpacity>
         )}
       </View>
       
-      <ScrollView style={styles.columnContent}>
+      <ScrollView style={lifeAdminScreenTabletStyles.columnContent}>
         {selectedCategory ? (
           getCategoryTasks(selectedCategory).map(task => (
             <TouchableOpacity
               key={task.id}
               style={[
-                styles.taskItem,
-                selectedTasks.has(task.id) && styles.selectedTaskItem,
-                scheduledTasks.has(task.id) && styles.scheduledTaskItem
+                lifeAdminScreenTabletStyles.taskItem,
+                selectedTasks.has(task.id) && lifeAdminScreenTabletStyles.selectedTaskItem,
+                scheduledTasks.has(task.id) && lifeAdminScreenTabletStyles.scheduledTaskItem
               ]}
               onPress={() => toggleTask(task.id)}
             >
-              <View style={styles.taskHeader}>
-                <Text style={styles.taskTitle} numberOfLines={2}>
+              <View style={lifeAdminScreenTabletStyles.taskHeader}>
+                <Text style={lifeAdminScreenTabletStyles.taskTitle} numberOfLines={2}>
                   {task.title}
                 </Text>
                 {scheduledTasks.has(task.id) && (
                   <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
                 )}
               </View>
-              <View style={styles.taskMeta}>
-                <Text style={styles.taskFrequency}>{task.frequency}</Text>
+              <View style={lifeAdminScreenTabletStyles.taskMeta}>
+                <Text style={lifeAdminScreenTabletStyles.taskFrequency}>{task.frequency}</Text>
                 <TouchableOpacity
                   onPress={() => handleFrequencySelect(task, task.frequency)}
-                  style={styles.frequencyButton}
+                  style={lifeAdminScreenTabletStyles.frequencyButton}
                 >
                   <Ionicons name="time-outline" size={14} color={theme.colors.primary} />
                 </TouchableOpacity>
@@ -299,9 +299,9 @@ export const LifeAdminScreenTablet = () => {
             </TouchableOpacity>
           ))
         ) : (
-          <View style={styles.emptyState}>
+          <View style={lifeAdminScreenTabletStyles.emptyState}>
             <Ionicons name="list-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>Select a category to view tasks</Text>
+            <Text style={lifeAdminScreenTabletStyles.emptyText}>Select a category to view tasks</Text>
           </View>
         )}
       </ScrollView>
@@ -309,56 +309,56 @@ export const LifeAdminScreenTablet = () => {
   );
 
   const renderSelectedColumn = () => (
-    <View style={styles.column}>
-      <View style={styles.columnHeader}>
-        <Text style={styles.columnTitle}>Selected Tasks</Text>
-        <Text style={styles.selectedCount}>{selectedTasks.size} selected</Text>
+    <View style={lifeAdminScreenTabletStyles.column}>
+      <View style={lifeAdminScreenTabletStyles.columnHeader}>
+        <Text style={lifeAdminScreenTabletStyles.columnTitle}>Selected Tasks</Text>
+        <Text style={lifeAdminScreenTabletStyles.selectedCount}>{selectedTasks.size} selected</Text>
       </View>
       
-      <ScrollView style={styles.columnContent}>
+      <ScrollView style={lifeAdminScreenTabletStyles.columnContent}>
         {Array.from(selectedTasks).map(taskId => {
           const task = tasks.find(t => t.id === taskId);
           if (!task) return null;
           
           return (
-            <View key={taskId} style={styles.selectedTaskItem}>
-              <View style={styles.taskHeader}>
-                <Text style={styles.taskTitle} numberOfLines={2}>
+            <View key={taskId} style={lifeAdminScreenTabletStyles.selectedTaskItem}>
+              <View style={lifeAdminScreenTabletStyles.taskHeader}>
+                <Text style={lifeAdminScreenTabletStyles.taskTitle} numberOfLines={2}>
                   {task.title}
                 </Text>
                 <TouchableOpacity
                   onPress={() => toggleTask(taskId)}
-                  style={styles.removeButton}
+                  style={lifeAdminScreenTabletStyles.removeButton}
                 >
                   <Ionicons name="close-circle" size={16} color={theme.colors.danger} />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.taskCategory}>{formatCategoryName(task.category)}</Text>
-              <Text style={styles.taskFrequency}>{task.frequency}</Text>
+              <Text style={lifeAdminScreenTabletStyles.taskCategory}>{formatCategoryName(task.category)}</Text>
+              <Text style={lifeAdminScreenTabletStyles.taskFrequency}>{task.frequency}</Text>
             </View>
           );
         })}
         
         {selectedTasks.size === 0 && (
-          <View style={styles.emptyState}>
+          <View style={lifeAdminScreenTabletStyles.emptyState}>
             <Ionicons name="checkmark-circle-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No tasks selected</Text>
+            <Text style={lifeAdminScreenTabletStyles.emptyText}>No tasks selected</Text>
           </View>
         )}
       </ScrollView>
       
       {selectedTasks.size > 0 && (
-        <View style={styles.actionPanel}>
+        <View style={lifeAdminScreenTabletStyles.actionPanel}>
           <Button
             title={`Schedule ${selectedTasks.size} Tasks`}
             onPress={handleScheduleTasks}
             disabled={isLoading}
-            style={styles.scheduleButton}
+            style={lifeAdminScreenTabletStyles.scheduleButton}
           />
           {isLoading && (
-            <View style={styles.loadingContainer}>
+            <View style={lifeAdminScreenTabletStyles.loadingContainer}>
               <ActivityIndicator size="small" color={theme.colors.primary} />
-              <Text style={styles.loadingText}>{loadingStage}</Text>
+              <Text style={lifeAdminScreenTabletStyles.loadingText}>{loadingStage}</Text>
             </View>
           )}
         </View>
@@ -394,158 +394,4 @@ export const LifeAdminScreenTablet = () => {
       />
     </SafeAreaView>
   );
-};
-
-const styles = StyleSheet.create({
-  column: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    margin: getResponsiveValue(8, 12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  columnHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: getResponsiveValue(12, 16),
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  columnTitle: {
-    fontSize: getResponsiveFontSize(16, 18),
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-  },
-  selectedCount: {
-    fontSize: getResponsiveFontSize(12, 14),
-    color: theme.colors.text.secondary,
-  },
-  collapseButton: {
-    padding: 4,
-  },
-  selectAllButton: {
-    padding: 4,
-  },
-  selectAllText: {
-    fontSize: getResponsiveFontSize(12, 14),
-    color: theme.colors.primary,
-    fontWeight: '500',
-  },
-  columnContent: {
-    flex: 1,
-    padding: getResponsiveValue(8, 12),
-  },
-  categoryItem: {
-    padding: getResponsiveValue(12, 16),
-    borderRadius: 8,
-    marginBottom: getResponsiveValue(4, 6),
-    backgroundColor: '#f8f9fa',
-  },
-  selectedCategoryItem: {
-    backgroundColor: theme.colors.primary + '20',
-    borderLeftWidth: 3,
-    borderLeftColor: theme.colors.primary,
-  },
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: getResponsiveValue(4, 6),
-  },
-  categoryName: {
-    fontSize: getResponsiveFontSize(14, 16),
-    fontWeight: '600',
-    color: theme.colors.text.primary,
-    textTransform: 'capitalize',
-  },
-  categoryCount: {
-    fontSize: getResponsiveFontSize(12, 14),
-    color: theme.colors.text.secondary,
-  },
-  taskItem: {
-    padding: getResponsiveValue(12, 16),
-    borderRadius: 8,
-    marginBottom: getResponsiveValue(4, 6),
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  selectedTaskItem: {
-    backgroundColor: theme.colors.primary + '20',
-    borderColor: theme.colors.primary,
-  },
-  scheduledTaskItem: {
-    backgroundColor: theme.colors.success + '20',
-    borderColor: theme.colors.success,
-  },
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: getResponsiveValue(4, 6),
-  },
-  taskTitle: {
-    fontSize: getResponsiveFontSize(14, 16),
-    fontWeight: '500',
-    color: theme.colors.text.primary,
-    flex: 1,
-    marginRight: getResponsiveValue(8, 12),
-  },
-  taskMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  taskFrequency: {
-    fontSize: getResponsiveFontSize(12, 14),
-    color: theme.colors.text.secondary,
-    textTransform: 'capitalize',
-  },
-  taskCategory: {
-    fontSize: getResponsiveFontSize(12, 14),
-    color: theme.colors.text.secondary,
-    textTransform: 'capitalize',
-    marginBottom: getResponsiveValue(2, 4),
-  },
-  frequencyButton: {
-    padding: 4,
-  },
-  removeButton: {
-    padding: 4,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: getResponsiveValue(40, 60),
-  },
-  emptyText: {
-    fontSize: getResponsiveFontSize(14, 16),
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    marginTop: getResponsiveValue(8, 12),
-  },
-  actionPanel: {
-    padding: getResponsiveValue(12, 16),
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  scheduleButton: {
-    marginBottom: getResponsiveValue(8, 12),
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    fontSize: getResponsiveFontSize(12, 14),
-    color: theme.colors.text.secondary,
-    marginLeft: getResponsiveValue(8, 12),
-  },
-}); 
+}; 

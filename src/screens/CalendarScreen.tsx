@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -13,11 +13,12 @@ import { format, parseISO } from 'date-fns';
 import { generateUUID } from '../utils/uuid';
 import { theme } from '../theme';
 import { sharedStyles } from '../theme/styles';
-import { TimeGrid } from '../components/TimeGrid';
-import { AddTaskModal } from '../components/AddTaskModal';
-import { AddMeetingModal } from '../components/AddMeetingModal';
-import { MeetingItem } from '../components/MeetingItem';
-import { ExpandableFab } from '../components/ExpandableFab';
+import { calendarScreenStyles } from '../styles/screens';
+import { TimeGrid } from '../components/display/TimeGrid';
+import { AddTaskModal } from '../components/modals/AddTaskModal';
+import { AddMeetingModal } from '../components/modals/AddMeetingModal';
+import { MeetingItem } from '../components/cards/MeetingItem';
+import { ExpandableFab } from '../components/buttons/ExpandableFab';
 import { Ionicons } from '@expo/vector-icons';
 
 type CalendarScreenProps = {
@@ -592,8 +593,8 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <Text style={[sharedStyles.header, { marginBottom: 0 }]}>Calendar</Text>
-              <TouchableOpacity style={styles.headerButton} onPress={handleTodayPress}>
-                <Text style={styles.headerButtonText}>Today</Text>
+              <TouchableOpacity style={calendarScreenStyles.headerButton} onPress={handleTodayPress}>
+                <Text style={calendarScreenStyles.headerButtonText}>Today</Text>
               </TouchableOpacity>
             </View>
             <Calendar
@@ -718,16 +719,4 @@ export default function CalendarScreen({ navigation, route }: CalendarScreenProp
       </View>
     </SafeAreaView>
   );
-}
-
-const styles = StyleSheet.create({
-  headerButton: {
-    marginRight: theme.spacing.md,
-    padding: theme.spacing.sm,
-  },
-  headerButtonText: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.semibold,
-  },
-}); 
+} 

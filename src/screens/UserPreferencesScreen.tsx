@@ -5,9 +5,9 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { sharedStyles } from '../theme/styles';
-import { Section } from '../components/Section';
-import { Button } from '../components/Button';
-import { UserPreferences } from '../components/UserPreferences';
+import { Section } from '../components/layout/Section';
+import { Button } from '../components/buttons/Button';
+import { UserPreferences } from '../components/display/UserPreferences';
 import { userPreferencesService, UserPreferences as UserPreferencesType } from '../services/userPreferencesService';
 import { theme } from '../theme';
 

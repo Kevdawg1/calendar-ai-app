@@ -14,7 +14,7 @@ import { theme } from '../theme';
 import { sharedStyles } from '../theme/styles';
 import { Task } from '../types';
 import { Ionicons } from '@expo/vector-icons';
-import { AddTaskModal } from '../components/AddTaskModal';
+import { AddTaskModal } from '../components/modals/AddTaskModal';
 import { taskService } from '../services/taskService';
 import { goalService } from '../services/goalService';
 

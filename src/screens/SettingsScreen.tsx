@@ -5,15 +5,16 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { sharedStyles } from '../theme/styles';
-import { Section } from '../components/Section';
-import { Button } from '../components/Button';
+import { settingsScreenStyles } from '../styles/screens';
+import { Section } from '../components/layout/Section';
+import { Button } from '../components/buttons/Button';
 import { taskService } from '../services/taskService';
 import { goalService } from '../services/goalService';
 import { userPreferencesService } from '../services/userPreferencesService';
 import { checkedTasksService } from '../services/checkedTasksService';
 import { theme } from '../theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OnboardingModal } from '../components/OnboardingModal';
+import { OnboardingModal } from '../components/modals/OnboardingModal';
 
 const MENU_OPTIONS = [
   { key: 'userPreferences', label: 'User Preferences', onPress: (navigation: NavigationProp) => navigation.navigate('UserPreferences') },
@@ -134,21 +135,21 @@ export const SettingsScreen = () => {
               ))}
             </View>
             
-            <View style={styles.dangerZone}>
-              <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
-              <Text style={styles.dangerZoneDescription}>
+            <View style={settingsScreenStyles.dangerZone}>
+              <Text style={settingsScreenStyles.dangerZoneTitle}>Danger Zone</Text>
+              <Text style={settingsScreenStyles.dangerZoneDescription}>
                 These actions cannot be undone. Please be certain.
               </Text>
               <Button
                 title="Reset App"
                 onPress={handleResetApp}
-                style={styles.resetButton}
+                style={settingsScreenStyles.resetButton}
                 variant="danger"
               />
             </View>
             
-            <View style={styles.versionContainer}>
-              <Text style={styles.versionText}>Version 2.1.0</Text>
+            <View style={settingsScreenStyles.versionContainer}>
+              <Text style={settingsScreenStyles.versionText}>Version 2.1.0</Text>
             </View>
           </Section>
         </ScrollView>
@@ -161,39 +162,4 @@ export const SettingsScreen = () => {
       )}
     </SafeAreaView>
   );
-};
-
-const styles = {
-  dangerZone: {
-    marginTop: theme.spacing.xl,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: '#FFF1F0',
-    borderWidth: 1,
-    borderColor: theme.colors.danger,
-  },
-  dangerZoneTitle: {
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.danger,
-    marginBottom: theme.spacing.sm,
-  },
-  dangerZoneDescription: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.lg,
-  },
-  resetButton: {
-    backgroundColor: theme.colors.danger,
-  },
-  versionContainer: {
-    marginTop: theme.spacing.xl,
-    alignItems: 'center' as const,
-    paddingVertical: theme.spacing.md,
-  },
-  versionText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.secondary,
-    textAlign: 'center' as const,
-  },
 }; 
