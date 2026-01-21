@@ -1,40 +1,51 @@
-// Existing components
-export { AddTaskModal } from './AddTaskModal';
-export { AddMeetingModal } from './AddMeetingModal';
-export { Badge } from './Badge';
-export { Button } from './Button';
-export { Card } from './Card';
-export { CategorySection } from './CategorySection';
-export { EmptyState } from './EmptyState';
-export { ErrorBoundary } from './ErrorBoundary';
-export { ErrorState } from './ErrorState';
-export { ExpandableFab } from './ExpandableFab';
-export { FormField } from './FormField';
-export { FrequencyModal } from './FrequencyModal';
-export { GoalItem } from './GoalItem';
-export { Header } from './Header';
-export { IconButton } from './IconButton';
-export { Input } from './Input';
-export { LifeAdminTaskItem } from './LifeAdminTaskItem';
-export { LoadingState } from './LoadingState';
-export { MeetingItem } from './MeetingItem';
-export { Modal } from './Modal';
-export { OnboardingModal } from './OnboardingModal';
-export { Section } from './Section';
-export { Select } from './Select';
-export { TabBar } from './TabBar';
-export { TaskItem } from './TaskItem';
-export { TimeGrid } from './TimeGrid';
-export { TimePicker } from './TimePicker';
+// Modals
+export { AddTaskModal } from './modals/AddTaskModal';
+export { AddMeetingModal } from './modals/AddMeetingModal';
+export { EditGoalModal } from './modals/EditGoalModal';
+export { FrequencyModal } from './modals/FrequencyModal';
+export { InfoModal } from './modals/InfoModal';
+export { Modal } from './modals/Modal';
+export { OnboardingModal } from './modals/OnboardingModal';
 
-// New reusable components
-export { ColorPicker } from './ColorPicker';
-export { InfoButton } from './InfoButton';
-export { GoalTypeSelector } from './GoalTypeSelector';
-export { PrioritySelector } from './PrioritySelector';
-export { GoalForm } from './GoalForm';
-export { InfoModal } from './InfoModal';
-export { EditGoalModal } from './EditGoalModal';
-export { WeeklyTimeBalance } from './WeeklyTimeBalance';
-export { GoalCard } from './GoalCard';
-export { UserPreferences } from './UserPreferences'; 
+// Forms
+export { FormField } from './forms/FormField';
+export { Input } from './forms/Input';
+export { Select } from './forms/Select';
+export { TimePicker } from './forms/TimePicker';
+export { GoalForm } from './forms/GoalForm';
+
+// Buttons
+export { Button } from './buttons/Button';
+export { IconButton } from './buttons/IconButton';
+export { InfoButton } from './buttons/InfoButton';
+export { ExpandableFab } from './buttons/ExpandableFab';
+
+// Cards
+export { Badge } from './cards/Badge';
+export { Card } from './cards/Card';
+export { GoalCard } from './cards/GoalCard';
+export { GoalItem } from './cards/GoalItem';
+export { LifeAdminTaskItem } from './cards/LifeAdminTaskItem';
+export { MeetingItem } from './cards/MeetingItem';
+export { TaskItem } from './cards/TaskItem';
+
+// Selectors
+export { ColorPicker } from './selectors/ColorPicker';
+export { GoalTypeSelector } from './selectors/GoalTypeSelector';
+export { PrioritySelector } from './selectors/PrioritySelector';
+
+// Layout
+export { CategorySection } from './layout/CategorySection';
+export { Header } from './layout/Header';
+export { ResponsiveLayout, SplitLayout, ThreeColumnLayout } from './layout/ResponsiveLayout';
+export { Section } from './layout/Section';
+export { TabBar } from './layout/TabBar';
+
+// Display
+export { EmptyState } from './display/EmptyState';
+export { ErrorBoundary } from './display/ErrorBoundary';
+export { ErrorState } from './display/ErrorState';
+export { LoadingState } from './display/LoadingState';
+export { TimeGrid } from './display/TimeGrid';
+export { UserPreferences } from './display/UserPreferences';
+export { WeeklyTimeBalance } from './display/WeeklyTimeBalance';

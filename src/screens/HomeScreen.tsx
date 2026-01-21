@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Section } from '../components/Section';
+import { Section } from '../components/layout/Section';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { sharedStyles } from '../theme/styles';
+import { homeScreenStyles } from '../styles/screens';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { useOrientation } from '../hooks/useOrientation';
-import { OnboardingModal } from '../components/OnboardingModal';
+import { OnboardingModal } from '../components/modals/OnboardingModal';
 import { userPreferencesService } from '../services/userPreferencesService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -82,15 +83,15 @@ const HomeScreen = () => {
           <Text style={sharedStyles.description}>
             Manage your tasks, goals, and life admin tasks all in one place.
           </Text>
-          <View style={styles.gridContainer}>
+          <View style={homeScreenStyles.gridContainer}>
             {menuItems.map((item, index) => (
               <TouchableOpacity
                 key={item.title}
-                style={[styles.gridItem, { backgroundColor: item.color }]}
+                style={[homeScreenStyles.gridItem, { backgroundColor: item.color }]}
                 onPress={item.onPress}
               >
                 <Ionicons name={item.icon} size={40} color="#fff" />
-                <Text style={styles.gridItemText}>{item.title}</Text>
+                <Text style={homeScreenStyles.gridItemText}>{item.title}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -103,38 +104,5 @@ const HomeScreen = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginTop: theme.spacing.lg,
-  },
-  gridItem: {
-    width: '48%',
-    aspectRatio: 1,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  gridItemText: {
-    color: '#fff',
-    fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.bold,
-    marginTop: theme.spacing.sm,
-    textAlign: 'center',
-  },
-});
 
 export default HomeScreen; 

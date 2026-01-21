@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../theme';
 import { sharedStyles } from '../theme/styles';
-import { Button } from '../components/Button';
+import { welcomeScreenStyles } from '../styles/screens';
+import { Button } from '../components/buttons/Button';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
@@ -30,91 +31,35 @@ export const WelcomeScreen = () => {
 
   return (
     <SafeAreaView style={sharedStyles.container}>
-      <View style={styles.welcomeContainer}>
-        <View style={styles.content}>
-          <View style={styles.imageContainer}>
+      <View style={welcomeScreenStyles.welcomeContainer}>
+        <View style={welcomeScreenStyles.content}>
+          <View style={welcomeScreenStyles.imageContainer}>
             <Image
               source={require('../../assets/logo.png')}
-              style={styles.welcomeImage}
+              style={welcomeScreenStyles.welcomeImage}
               resizeMode="contain"
             />
           </View>
           
-          <View style={styles.textContainer}>
-            <Text style={styles.title}>Welcome to AI-Cal</Text>
-            <Text style={styles.subtitle}>
+          <View style={welcomeScreenStyles.textContainer}>
+            <Text style={welcomeScreenStyles.title}>Welcome to AI-Cal</Text>
+            <Text style={welcomeScreenStyles.subtitle}>
               Your intelligent calendar assistant that helps you organize tasks, manage goals, and optimize your time.
             </Text>
-            <Text style={styles.description}>
+            <Text style={welcomeScreenStyles.description}>
               Let's get started by setting up your preferences to create a personalized experience just for you.
             </Text>
           </View>
         </View>
 
-        <View style={styles.buttonContainer}>
+        <View style={welcomeScreenStyles.buttonContainer}>
           <Button
             title="Get Started"
             onPress={handleGetStarted}
-            style={styles.getStartedButton}
+            style={welcomeScreenStyles.getStartedButton}
           />
         </View>
       </View>
     </SafeAreaView>
   );
-};
-
-const styles = StyleSheet.create({
-  welcomeContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.lg,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageContainer: {
-    marginBottom: theme.spacing.xl,
-    alignItems: 'center',
-  },
-  welcomeImage: {
-    width: 200,
-    height: 200,
-    borderRadius: theme.borderRadius.lg,
-  },
-  textContainer: {
-    alignItems: 'center',
-    maxWidth: 300,
-  },
-  title: {
-    fontSize: theme.typography.sizes.xxl,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  subtitle: {
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: theme.typography.weights.medium,
-    color: theme.colors.text.primary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-    lineHeight: 24,
-  },
-  description: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  buttonContainer: {
-    paddingBottom: theme.spacing.xl,
-  },
-  getStartedButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xl,
-  },
-}); 
+}; 

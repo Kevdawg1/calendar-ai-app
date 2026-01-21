@@ -5,8 +5,8 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { sharedStyles } from '../theme/styles';
-import { Section } from '../components/Section';
-import { Button } from '../components/Button';
+import { Section } from '../components/layout/Section';
+import { Button } from '../components/buttons/Button';
 import { notificationService, NotificationSettings } from '../services/notificationService';
 import { theme } from '../theme';
 

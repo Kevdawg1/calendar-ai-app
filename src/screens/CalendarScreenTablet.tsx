@@ -5,7 +5,6 @@ import {
   TouchableOpacity, 
   ScrollView, 
   FlatList,
-  StyleSheet,
   Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,8 +18,9 @@ import { Calendar } from 'react-native-calendars';
 import { format, parseISO, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { theme } from '../theme';
 import { sharedStyles } from '../theme/styles';
+import { calendarScreenTabletStyles } from '../styles/screens';
 import { Ionicons } from '@expo/vector-icons';
-import { SplitLayout } from '../components/ResponsiveLayout';
+import { SplitLayout } from '../components/layout/ResponsiveLayout';
 import { 
   getResponsiveValue, 
   getResponsiveFontSize,
@@ -45,7 +45,7 @@ export default function CalendarScreenTablet({ navigation, route }: CalendarScre
       headerRight: () => (
         <TouchableOpacity 
           onPress={() => setIsCalendarVisible(!isCalendarVisible)} 
-          style={styles.headerButton}
+          style={calendarScreenTabletStyles.headerButton}
         >
           <Ionicons 
             name={isCalendarVisible ? 'eye-off-outline' : 'eye-outline'} 
@@ -161,7 +161,7 @@ export default function CalendarScreenTablet({ navigation, route }: CalendarScre
   const renderTaskItem = ({ item }: { item: Task }) => (
     <TouchableOpacity
       style={[
-        styles.taskItem,
+        calendarScreenTabletStyles.taskItem,
         { borderLeftColor: getGoalColor(item.goalId) }
       ]}
       onPress={() => {
@@ -169,26 +169,26 @@ export default function CalendarScreenTablet({ navigation, route }: CalendarScre
         console.log('Task pressed:', item.title);
       }}
     >
-      <View style={styles.taskHeader}>
-        <Text style={styles.taskTitle} numberOfLines={2}>
+      <View style={calendarScreenTabletStyles.taskHeader}>
+        <Text style={calendarScreenTabletStyles.taskTitle} numberOfLines={2}>
           {item.title}
         </Text>
-        <View style={styles.taskMeta}>
-          <Text style={styles.taskTime}>{formatTaskTime(item)}</Text>
-          <Text style={styles.taskGoal}>{getGoalText(item.goalId)}</Text>
+        <View style={calendarScreenTabletStyles.taskMeta}>
+          <Text style={calendarScreenTabletStyles.taskTime}>{formatTaskTime(item)}</Text>
+          <Text style={calendarScreenTabletStyles.taskGoal}>{getGoalText(item.goalId)}</Text>
         </View>
       </View>
       {item.description && (
-        <Text style={styles.taskDescription} numberOfLines={2}>
+        <Text style={calendarScreenTabletStyles.taskDescription} numberOfLines={2}>
           {item.description}
         </Text>
       )}
-      <View style={styles.taskStatus}>
+      <View style={calendarScreenTabletStyles.taskStatus}>
         <View style={[
-          styles.statusIndicator,
+          calendarScreenTabletStyles.statusIndicator,
           { backgroundColor: item.status === 'completed' ? '#34C759' : '#FF9500' }
         ]} />
-        <Text style={styles.statusText}>
+        <Text style={calendarScreenTabletStyles.statusText}>
           {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
         </Text>
       </View>
@@ -196,11 +196,11 @@ export default function CalendarScreenTablet({ navigation, route }: CalendarScre
   );
 
   const renderCalendarPanel = () => (
-    <View style={styles.calendarPanel}>
-      <View style={styles.calendarHeader}>
-        <Text style={styles.panelTitle}>Calendar</Text>
+    <View style={calendarScreenTabletStyles.calendarPanel}>
+      <View style={calendarScreenTabletStyles.calendarHeader}>
+        <Text style={calendarScreenTabletStyles.panelTitle}>Calendar</Text>
         <TouchableOpacity
-          style={styles.addButton}
+          style={calendarScreenTabletStyles.addButton}
           onPress={() => {
             // Handle add task
             console.log('Add task pressed');
@@ -228,19 +228,19 @@ export default function CalendarScreenTablet({ navigation, route }: CalendarScre
             textMonthFontSize: getResponsiveFontSize(16, 20),
             textDayHeaderFontSize: getResponsiveFontSize(12, 16),
           }}
-          style={styles.calendar}
+          style={calendarScreenTabletStyles.calendar}
         />
       )}
       
-      <View style={styles.timeGridContainer}>
-        <Text style={styles.timeGridTitle}>Today's Schedule</Text>
-        <ScrollView style={styles.timeGridScroll}>
+      <View style={calendarScreenTabletStyles.timeGridContainer}>
+        <Text style={calendarScreenTabletStyles.timeGridTitle}>Today's Schedule</Text>
+        <ScrollView style={calendarScreenTabletStyles.timeGridScroll}>
           {getTasksForDate(selectedDate).map(task => (
-            <View key={task.id} style={styles.timeGridItem}>
-              <Text style={styles.timeGridTime}>
+            <View key={task.id} style={calendarScreenTabletStyles.timeGridItem}>
+              <Text style={calendarScreenTabletStyles.timeGridTime}>
                 {task.startTime || 'All day'}
               </Text>
-              <Text style={styles.timeGridTitle}>
+              <Text style={calendarScreenTabletStyles.timeGridTitle}>
                 {task.title}
               </Text>
             </View>
@@ -251,12 +251,12 @@ export default function CalendarScreenTablet({ navigation, route }: CalendarScre
   );
 
   const renderTaskListPanel = () => (
-    <View style={styles.taskListPanel}>
-      <View style={styles.taskListHeader}>
-        <Text style={styles.panelTitle}>
+    <View style={calendarScreenTabletStyles.taskListPanel}>
+      <View style={calendarScreenTabletStyles.taskListHeader}>
+        <Text style={calendarScreenTabletStyles.panelTitle}>
           Tasks for {getRelativeDateText(selectedDate)}
         </Text>
-        <Text style={styles.taskCount}>
+        <Text style={calendarScreenTabletStyles.taskCount}>
           {getTasksForDate(selectedDate).length} tasks
         </Text>
       </View>
@@ -265,20 +265,20 @@ export default function CalendarScreenTablet({ navigation, route }: CalendarScre
         data={getTasksForDate(selectedDate)}
         renderItem={renderTaskItem}
         keyExtractor={(item) => item.id}
-        style={styles.taskList}
-        contentContainerStyle={styles.taskListContent}
+        style={calendarScreenTabletStyles.taskList}
+        contentContainerStyle={calendarScreenTabletStyles.taskListContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
+          <View style={calendarScreenTabletStyles.emptyState}>
             <Ionicons name="calendar-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No tasks scheduled for this date</Text>
+            <Text style={calendarScreenTabletStyles.emptyText}>No tasks scheduled for this date</Text>
             <TouchableOpacity
-              style={styles.emptyAddButton}
+              style={calendarScreenTabletStyles.emptyAddButton}
               onPress={() => {
                 console.log('Add task from empty state');
               }}
             >
-              <Text style={styles.emptyAddButtonText}>Add Task</Text>
+              <Text style={calendarScreenTabletStyles.emptyAddButtonText}>Add Task</Text>
             </TouchableOpacity>
           </View>
         }
@@ -296,181 +296,10 @@ export default function CalendarScreenTablet({ navigation, route }: CalendarScre
           backgroundColor={theme.colors.background}
         />
       ) : (
-        <View style={styles.fullWidthContainer}>
+        <View style={calendarScreenTabletStyles.fullWidthContainer}>
           {renderTaskListPanel()}
         </View>
       )}
     </SafeAreaView>
   );
-}
-
-const styles = StyleSheet.create({
-  headerButton: {
-    marginRight: getResponsiveValue(10, 16),
-    padding: 8,
-  },
-  calendarPanel: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    margin: getOptimalTabletMargins(),
-    padding: getTabletContentPadding(),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: getResponsiveValue(12, 16),
-  },
-  panelTitle: {
-    fontSize: getResponsiveFontSize(18, 24),
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-  },
-  addButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 8,
-    padding: 8,
-  },
-  calendar: {
-    borderRadius: 8,
-    marginBottom: getResponsiveValue(12, 16),
-  },
-  timeGridContainer: {
-    flex: 1,
-  },
-  timeGridTitle: {
-    fontSize: getResponsiveFontSize(16, 20),
-    fontWeight: '600',
-    marginBottom: getResponsiveValue(8, 12),
-    color: theme.colors.text.primary,
-  },
-  timeGridScroll: {
-    flex: 1,
-  },
-  timeGridItem: {
-    flexDirection: 'row',
-    padding: getResponsiveValue(8, 12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  timeGridTime: {
-    fontSize: getResponsiveFontSize(12, 16),
-    color: theme.colors.text.secondary,
-    width: 60,
-  },
-  taskListPanel: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    margin: getOptimalTabletMargins(),
-    padding: getTabletContentPadding(),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  taskListHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: getResponsiveValue(12, 16),
-  },
-  taskCount: {
-    fontSize: getResponsiveFontSize(14, 18),
-    color: theme.colors.text.secondary,
-  },
-  taskList: {
-    flex: 1,
-  },
-  taskListContent: {
-    paddingBottom: 20,
-  },
-  taskItem: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: getResponsiveValue(12, 16),
-    marginBottom: getResponsiveValue(8, 12),
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.primary,
-  },
-  taskHeader: {
-    marginBottom: getResponsiveValue(4, 6),
-  },
-  taskTitle: {
-    fontSize: getResponsiveFontSize(16, 20),
-    fontWeight: '600',
-    color: theme.colors.text.primary,
-    marginBottom: getResponsiveValue(4, 6),
-  },
-  taskMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  taskTime: {
-    fontSize: getResponsiveFontSize(12, 16),
-    color: theme.colors.text.secondary,
-    fontWeight: '500',
-  },
-  taskGoal: {
-    fontSize: getResponsiveFontSize(12, 16),
-    color: theme.colors.text.secondary,
-    fontStyle: 'italic',
-  },
-  taskDescription: {
-    fontSize: getResponsiveFontSize(14, 18),
-    color: theme.colors.text.secondary,
-    marginBottom: getResponsiveValue(8, 12),
-    lineHeight: getResponsiveFontSize(18, 22),
-  },
-  taskStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: getResponsiveValue(6, 8),
-  },
-  statusText: {
-    fontSize: getResponsiveFontSize(12, 16),
-    color: theme.colors.text.secondary,
-    fontWeight: '500',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: getResponsiveValue(40, 60),
-  },
-  emptyText: {
-    fontSize: getResponsiveFontSize(16, 20),
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    marginTop: getResponsiveValue(12, 16),
-    marginBottom: getResponsiveValue(20, 24),
-  },
-  emptyAddButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: getResponsiveValue(20, 24),
-    paddingVertical: getResponsiveValue(10, 12),
-    borderRadius: 8,
-  },
-  emptyAddButtonText: {
-    color: '#fff',
-    fontSize: getResponsiveFontSize(14, 18),
-    fontWeight: '600',
-  },
-  fullWidthContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-}); 
+} 
